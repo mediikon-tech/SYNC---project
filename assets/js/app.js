@@ -26,4 +26,37 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     if (emptyState) emptyState.hidden = visibleRows !== 0;
   }));
+
+  document.querySelectorAll('[data-toggle-course]').forEach(button => {
+    button.addEventListener('click', () => {
+      const row = button.closest('[data-course-row]');
+      const status = row.querySelector('[data-status]');
+      const registered = status.textContent.trim() === 'Registered';
+      status.textContent = registered ? 'Available' : 'Registered';
+      status.classList.toggle('status-registered', !registered);
+      status.classList.toggle('status-available', registered);
+      button.textContent = registered ? 'Add course' : 'Remove';
+      button.classList.toggle('remove-course', !registered);
+      button.classList.toggle('add-course', registered);
+    });
+  });
+
+  const saveCourses = document.getElementById('saveCourses');
+  if (saveCourses) {
+    saveCourses.addEventListener('click', () => {
+      const message = document.getElementById('courseMessage');
+      if (message) message.hidden = false;
+    });
+  }
+
+  const generateTimetable = document.getElementById('generateTimetable');
+  if (generateTimetable) {
+    generateTimetable.addEventListener('click', () => {
+      const message = document.getElementById('timetableMessage');
+      if (message) {
+        message.textContent = 'Sample timetable displayed. Real generation and course, lecturer, time and venue conflict validation will be implemented with the scheduling backend.';
+      }
+    });
+  }
+
 });
