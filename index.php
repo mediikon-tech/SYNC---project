@@ -22,15 +22,15 @@ $courses = [
         <div class="nav-label">WORKSPACE</div>
         <nav class="main-nav" aria-label="Main navigation">
             <a class="nav-link active" href="index.php"><span class="nav-icon">▦</span> Dashboard</a>
-            <a class="nav-link" href="#timetable"><span class="nav-icon">▤</span> My timetable</a>
-            <a class="nav-link" href="#courses"><span class="nav-icon">▣</span> My courses</a>
-            <a class="nav-link" href="#schedule"><span class="nav-icon">＋</span> Schedule a class</a>
+            <a class="nav-link" href="timetable.php"><span class="nav-icon">▤</span> Weekly timetable</a>
+            <a class="nav-link" href="courses.php"><span class="nav-icon">▣</span> My courses</a>
+            <a class="nav-link" href="timetable.php"><span class="nav-icon">＋</span> Schedule a class</a>
         </nav>
         <div class="nav-label management-label">MANAGEMENT</div>
         <nav class="main-nav" aria-label="Management navigation">
-            <a class="nav-link" href="#lecturers"><span class="nav-icon">♙</span> Lecturers</a>
-            <a class="nav-link" href="#venues"><span class="nav-icon">⌂</span> Venues</a>
-            <a class="nav-link" href="#settings"><span class="nav-icon">⚙</span> Settings</a>
+            <a class="nav-link" href="register.php"><span class="nav-icon">♙</span> Student registration</a>
+            <a class="nav-link" href="login.php"><span class="nav-icon">↪</span> Sign in</a>
+            <a class="nav-link" href="register.php"><span class="nav-icon">＋</span> Create account</a>
         </nav>
         <div class="sidebar-bottom">
             <div class="help-card"><div class="help-symbol">?</div><strong>Need a hand?</strong><p>Get help using Sync and managing your timetable.</p><a href="mailto:support@sync.local">Contact support ↗</a></div>
@@ -53,7 +53,7 @@ $courses = [
             </section>
             <section class="content-grid">
                 <article class="panel timetable-panel" id="timetable">
-                    <div class="panel-heading"><div><h2>Your timetable</h2><p class="muted">Keep track of your upcoming classes.</p></div><a class="text-link" href="#weekly-view">View full timetable <span>↗</span></a></div>
+                    <div class="panel-heading"><div><h2>Your timetable</h2><p class="muted">Keep track of your upcoming classes.</p></div><a class="text-link" href="timetable.php">View full timetable <span>↗</span></a></div>
                     <div class="day-switcher"><button class="day-tab selected" data-day="Today">Today <span>3</span></button><button class="day-tab" data-day="Tomorrow">Tomorrow <span>2</span></button><button class="day-tab" data-day="Friday">Friday <span>4</span></button></div>
                     <div class="class-list" id="classList">
                         <?php foreach ($courses as $course): ?>
@@ -66,11 +66,11 @@ $courses = [
                     <div class="empty-state" id="emptyState" hidden>No sample classes for this day yet.</div>
                 </article>
                 <aside class="right-column">
-                    <article class="panel quick-panel"><div class="panel-heading"><div><h2>Quick actions</h2><p class="muted">Jump into your workflow.</p></div></div><a class="quick-action" href="#courses"><span class="quick-icon green-icon">▣</span><span><strong>Manage courses</strong><small>Add or remove your courses</small></span><b>›</b></a><a class="quick-action" href="#schedule"><span class="quick-icon blue-icon">＋</span><span><strong>Schedule a class</strong><small>Submit a new class schedule</small></span><b>›</b></a><a class="quick-action" href="#weekly-view"><span class="quick-icon purple-icon">▤</span><span><strong>Generate timetable</strong><small>Build your weekly view</small></span><b>›</b></a></article>
+                    <article class="panel quick-panel"><div class="panel-heading"><div><h2>Quick actions</h2><p class="muted">Jump into your workflow.</p></div></div><a class="quick-action" href="courses.php"><span class="quick-icon green-icon">▣</span><span><strong>Manage courses</strong><small>Add or remove your courses</small></span><b>›</b></a><a class="quick-action" href="timetable.php"><span class="quick-icon blue-icon">＋</span><span><strong>Schedule a class</strong><small>Submit a new class schedule</small></span><b>›</b></a><a class="quick-action" href="#weekly-view"><span class="quick-icon purple-icon">▤</span><span><strong>Generate timetable</strong><small>Build your weekly view</small></span><b>›</b></a></article>
                     <article class="tip-card"><div class="tip-icon">✦</div><div><strong>Keep your timetable updated</strong><p>Check course and venue details before heading to class. Sync will flag schedule conflicts as scheduling features are added.</p></div></article>
                 </aside>
             </section>
-            <section class="panel course-panel" id="courses"><div class="panel-heading"><div><h2>Your courses</h2><p class="muted">A quick look at your registered courses.</p></div><a class="text-link" href="#manage-courses">Manage courses <span>↗</span></a></div><div class="course-chips"><span><b>CSC 401</b> Software Engineering</span><span><b>CSC 405</b> Database Systems</span><span><b>CSC 409</b> Computer Networks</span><span><b>CSC 411</b> Artificial Intelligence</span><span><b>CSC 415</b> Research Methods</span><span><b>CSC 417</b> Project Management</span></div></section>
+            <section class="panel course-panel" id="courses"><div class="panel-heading"><div><h2>Your courses</h2><p class="muted">A quick look at your registered courses.</p></div><a class="text-link" href="courses.php">Manage courses <span>↗</span></a></div><div class="course-chips"><span><b>CSC 401</b> Software Engineering</span><span><b>CSC 405</b> Database Systems</span><span><b>CSC 409</b> Computer Networks</span><span><b>CSC 411</b> Artificial Intelligence</span><span><b>CSC 415</b> Research Methods</span><span><b>CSC 417</b> Project Management</span></div></section>
             <footer class="footer"><span>© <?= date('Y') ?> Sync. Smart course allocation and timetable management.</span><span>Built for a clearer academic week.</span></footer>
         </section>
     </main>
