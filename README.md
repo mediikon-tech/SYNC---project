@@ -1,29 +1,44 @@
 # Sync
 
-Smart Course Allocation and Timetable Conflict Resolution System.
+**Smart Course Allocation and Timetable Conflict Resolution System**
 
 ## Technology
-- PHP
-- MySQL
+- PHP 8+ (PDO)
+- MySQL / MariaDB
 - HTML, CSS, JavaScript
 - XAMPP for local development
 
 ## Project overview
 Sync helps students manage course registration and view a weekly timetable. Lecturers can select courses they teach and submit them for administrator approval. Approved lecturers can schedule classes. Two course representatives per department can schedule department courses that have not yet been scheduled by a lecturer.
 
-The system validates course, lecturer, time, and venue conflicts before saving a class. If a conflict cannot be resolved, it flags it for review.
+The scheduling layer must validate course, lecturer, time, venue, and student-group clashes before saving a class. Unavoidable conflicts should be flagged for administrator review.
 
-## Planned roles
-- Student: register, select department and level, manage allocated courses, and view/generate a weekly timetable.
-- Lecturer: select courses, request approval, and schedule approved courses.
-- Course representative: schedule unscheduled courses within their department.
-- Administrator: manage users, departments, courses, lecturers, approvals, and timetable oversight.
+## Roles
+- **Student:** register, select department and level, manage allocated courses, and view/generate a weekly timetable.
+- **Lecturer:** request approval to teach courses and schedule approved courses.
+- **Course representative:** schedule department courses that have not yet been scheduled by a lecturer.
+- **Administrator:** manage users, departments, courses, lecturer approvals, and timetable oversight.
 
-## Run locally
-1. Install XAMPP and start Apache and MySQL.
-2. Place the project folder inside `C:\xampp\htdocs\sync`.
-3. Create a MySQL database for Sync and import the SQL schema when added.
-4. Open `http://localhost/sync/` in your browser.
+## Run locally with XAMPP
+1. Clone or copy this project into `C:\xampp\htdocs\sync`.
+2. Open the XAMPP Control Panel and start **Apache** and **MySQL**.
+3. Open phpMyAdmin at `http://localhost/phpmyadmin`.
+4. Select **Import**, choose `database/schema.sql` from this project, and run the import. The script creates the `sync_db` database and core tables.
+5. The local PDO connection defaults are in `config/database.php`: host `127.0.0.1`, database `sync_db`, username `root`, and an empty password. Adjust these for your local MySQL setup if needed. Environment variables `SYNC_DB_HOST`, `SYNC_DB_NAME`, `SYNC_DB_USER`, and `SYNC_DB_PASS` can override the defaults.
+6. Open `http://localhost/sync/` in your browser.
 
-## Development status
-Initial project setup. Authentication, database schema, scheduling logic, and admin tools will be implemented in subsequent steps.
+## Database foundation
+The initial schema includes:
+- departments and user accounts with student, lecturer, course representative, and admin roles
+- courses and default course mappings by department, level, semester, and academic session
+- each student's saved course selection, allowing default courses to be removed and restored
+- lecturer course approval requests
+- class schedules with course, lecturer, day, time, venue, section, session, and semester
+- timetable conflict records for review and resolution
+
+The schema is a foundation; it does not by itself implement authentication, course-selection persistence, timetable generation, or conflict validation. Those behaviours must be implemented in the PHP application before the system is treated as production-ready.
+
+## Current development status
+- UI prototype: dashboard, login, registration, course management, weekly timetable.
+- Database schema and reusable PDO connection: added.
+- Real authentication, saved course selection, timetable generation, clash validation, and admin tools: next implementation stages.
