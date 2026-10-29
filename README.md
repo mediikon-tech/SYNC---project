@@ -24,8 +24,8 @@ The scheduling layer must validate course, lecturer, time, venue, and student-gr
 2. Open the XAMPP Control Panel and start **Apache** and **MySQL**.
 3. Open phpMyAdmin at `http://localhost/phpmyadmin`.
 4. Select **Import**, choose `database/schema.sql` from this project, and run the import. The script creates the `sync_db` database and core tables.
-5. The local PDO connection defaults are in `config/database.php`: host `127.0.0.1`, database `sync_db`, username `root`, and an empty password. Adjust these for your local MySQL setup if needed. Environment variables `SYNC_DB_HOST`, `SYNC_DB_NAME`, `SYNC_DB_USER`, and `SYNC_DB_PASS` can override the defaults.
-6. Open `http://localhost/sync/` in your browser.
+5. (Optional) Import `database/demo_data.sql` if you want illustrative Computer Science courses to test the course-selection page. These are demo records for 400 Level, Semester 1 only; replace them with your institution's approved curriculum. Existing student accounts can add mapped courses from the My Courses page.\n6. The local PDO connection defaults are in `config/database.php`: host `127.0.0.1`, database `sync_db`, username `root`, and an empty password. Adjust these for your local MySQL setup if needed. Environment variables `SYNC_DB_HOST`, `SYNC_DB_NAME`, `SYNC_DB_USER`, and `SYNC_DB_PASS` can override the defaults.
+7. Open `http://localhost/sync/` in your browser.
 
 ## Database foundation
 The initial schema includes:
@@ -40,7 +40,7 @@ The schema is a foundation; it does not by itself implement authentication, cour
 
 ## Current development status
 - UI prototype: dashboard, course management, and weekly timetable (these pages still contain sample data).
-- Database schema and reusable PDO connection: added.
+- Database schema and reusable PDO connection: added.\n- Student course selection now reads department/level mappings from MySQL and saves add/remove actions per student, session, and semester.
 - Student registration and sign-in now use the database, password hashing, sessions, CSRF tokens, and server-side validation.
 - Workspace pages require sign-in; logout uses a POST request with a CSRF token.
-- Saved course-management UI, timetable generation, clash validation, lecturer workflows, and admin tools still need implementation.
+- Timetable generation, clash validation, lecturer workflows, and admin tools still need implementation.
