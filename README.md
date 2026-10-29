@@ -39,6 +39,8 @@ The initial schema includes:
 The schema is a foundation; it does not by itself implement authentication, course-selection persistence, timetable generation, or conflict validation. Those behaviours must be implemented in the PHP application before the system is treated as production-ready.
 
 ## Current development status
-- UI prototype: dashboard, login, registration, course management, weekly timetable.
+- UI prototype: dashboard, course management, and weekly timetable (these pages still contain sample data).
 - Database schema and reusable PDO connection: added.
-- Real authentication, saved course selection, timetable generation, clash validation, and admin tools: next implementation stages.
+- Student registration and sign-in now use the database, password hashing, sessions, CSRF tokens, and server-side validation.
+- Workspace pages require sign-in; logout uses a POST request with a CSRF token.
+- Saved course-management UI, timetable generation, clash validation, lecturer workflows, and admin tools still need implementation.
