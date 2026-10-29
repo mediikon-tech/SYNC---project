@@ -34,6 +34,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $error = 'Enter your full name, matric number, and a valid email address.';
     } elseif (!ctype_digit($old['department_id']) || !in_array((int) $old['level'], [100, 200, 300, 400, 500], true)) {
         $error = 'Choose a valid department and academic level.';
+    } elseif (!isset($_POST['confirm_details'])) {
+        $error = 'Please confirm that your student information is accurate.';
     } elseif (strlen((string) ($_POST['password'] ?? '')) < 8) {
         $error = 'Your password must contain at least 8 characters.';
     } elseif (($_POST['password'] ?? '') !== ($_POST['confirm_password'] ?? '')) {
