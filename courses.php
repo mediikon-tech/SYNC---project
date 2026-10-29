@@ -14,7 +14,6 @@ if (($currentUser['role'] ?? '') !== 'student') {
 $pageTitle = 'My courses';
 $activePage = 'courses';
 $academicSession = '2026/2027';
-$semester = 1;
 $error = '';
 $courseList = [];
 $registeredCount = 0;
@@ -116,7 +115,7 @@ $courseQuery = $pdo->prepare(
       AND sc.semester = dcl.semester
      WHERE dcl.department_id = :department_id
        AND dcl.academic_level = :academic_level
-       AND dcl.academic_session = :academic_session
+       AND dcl.academic_session = :session_filter
        AND c.is_active = 1
      ORDER BY dcl.semester, c.course_code'
 );
@@ -124,7 +123,7 @@ $courseQuery->execute([
     'student_id' => (int) $currentUser['id'],
     'department_id' => (int) ($currentUser['department_id'] ?? 0),
     'academic_level' => (int) ($currentUser['academic_level'] ?? 0),
-    'academic_session' => $academicSession,
+    'session_filter' => $academicSession,
 ]);
 $courseList = $courseQuery->fetchAll();
 
