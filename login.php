@@ -1,5 +1,53 @@
 <?php
+declare(strict_types=1);
+
+require_once __DIR__ . '/includes/auth.php';
+require_once __DIR__ . '/includes/helpers.php';
+
+if (current_user() !== null) {
+    header('Location: index.php');
+    exit;
+}
+
 $pageTitle = 'Sign in';
+$error = '';
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $email = strtolower(trim((string) ($_POST['email'] ?? '')));
+    $password = (string) ($_POST['password'] ?? '');
+
+    if (!csrf_is_valid($_POST['csrf_token'] ?? null)) {
+        $error = 'Your form session expired. Refresh the page and try again.';
+    } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL) || $password === '') {
+        $error = 'Enter a valid email address and password.';
+    } else {
+        try {
+            require_once __DIR__ . '/config/database.php';
+            $query = $pdo->prepare(
+                'SELECT u.id, u.full_name, u.email, u.password_hash, u.role, u.department_id,
+                        u.academic_level, u.is_active, d.name AS department_name
+                 FROM users u LEFT JOIN departments d ON d.id = u.department_id
+                 WHERE u.email = ? LIMIT 1'
+            );
+            $query->execute([$email]);
+            $user = $query->fetch();
+
+            if (!$user || !password_verify($password, $user['password_hash']) || (int) $user['is_active'] !== 1) {
+                $error = 'The email or password is incorrect, or the account is inactive.';
+            } else {
+                session_regenerate_id(true);
+                unset($user['password_hash'], $user['is_active']);
+                $_SESSION['user'] = $user;
+                unset($_SESSION['csrf_token']);
+                header('Location: index.php');
+                exit;
+            }
+        } catch (Throwable $exception) {
+            error_log('Sync sign-in failed: ' . $exception->getMessage());
+            $error = 'Sign-in is temporarily unavailable. Check that MySQL is running and the schema is imported.';
+        }
+    }
+}
 ?>
 <!doctype html>
 <html lang="en">
@@ -20,16 +68,16 @@ $pageTitle = 'Sign in';
       <div class="auth-form-wrap">
         <div class="mobile-auth-brand"><a class="brand" href="index.php"><span class="brand-mark">S</span><span>sync<span class="brand-dot">.</span><small>SMART TIMETABLE</small></span></a></div>
         <span class="eyebrow">WELCOME BACK</span><h2>Sign in to Sync</h2><p class="muted auth-subtitle">Enter your account details to continue.</p>
-        <form class="auth-form" action="#" method="post" onsubmit="event.preventDefault(); document.getElementById('demoMessage').hidden=false;">
-          <label for="email">Email address</label><input id="email" name="email" type="email" placeholder="you@university.edu" autocomplete="email" required>
-          <div class="label-row"><label for="password">Password</label><a href="#" class="form-link" onclick="alert('Password recovery will be connected when authentication is implemented.'); return false;">Forgot password?</a></div>
+        <?php if ($error !== ''): ?><p class="form-feedback" role="alert"><?= e($error) ?></p><?php endif; ?>
+        <form class="auth-form" action="login.php" method="post">
+          <input type="hidden" name="csrf_token" value="<?= e(csrf_token()) ?>">
+          <label for="email">Email address</label><input id="email" name="email" type="email" placeholder="you@university.edu" autocomplete="email" maxlength="190" required>
+          <div class="label-row"><label for="password">Password</label><span class="form-link" title="Ask your administrator to reset your password">Forgot password?</span></div>
           <input id="password" name="password" type="password" placeholder="Enter your password" autocomplete="current-password" required>
-          <label class="remember-row"><input type="checkbox" name="remember"> <span>Keep me signed in on this device</span></label>
           <button class="primary-button" type="submit">Sign in <span>→</span></button>
-          <p class="form-feedback" id="demoMessage" hidden>This is the interface prototype. Account sign-in will work after the database and authentication are connected.</p>
         </form>
         <p class="auth-switch">New to Sync? <a href="register.php">Create a student account</a></p>
-        <a href="index.php" class="back-link">← Back to dashboard preview</a>
+        <a href="index.php" class="back-link">← Back to dashboard</a>
       </div>
     </section>
   </main>
