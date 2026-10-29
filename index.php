@@ -1,4 +1,8 @@
 <?php
+require_once __DIR__ . '/includes/auth.php';
+require_once __DIR__ . '/includes/helpers.php';
+require_login();
+$currentUser = current_user();
 $pageTitle = 'Dashboard';
 $today = date('l, j F Y');
 $courses = [
@@ -34,7 +38,7 @@ $courses = [
         </nav>
         <div class="sidebar-bottom">
             <div class="help-card"><div class="help-symbol">?</div><strong>Need a hand?</strong><p>Get help using Sync and managing your timetable.</p><a href="mailto:support@sync.local">Contact support ↗</a></div>
-            <div class="user-mini"><div class="avatar">MV</div><div><strong>Student User</strong><small>Computer Science</small></div><span class="user-menu">•••</span></div>
+            <div class="user-mini"><div class="avatar"><?= e(strtoupper(substr((string) ($currentUser['full_name'] ?? 'S'), 0, 1))) ?></div><div><strong><?= e($currentUser['full_name'] ?? 'Student') ?></strong><small><?= e($currentUser['department_name'] ?? ucfirst($currentUser['role'] ?? 'user')) ?></small></div><form action="logout.php" method="post"><input type="hidden" name="csrf_token" value="<?= e(csrf_token()) ?>"><button class="user-menu" type="submit" aria-label="Sign out" title="Sign out">↪</button></form></div>
         </div>
     </aside>
     <main class="main-content">
