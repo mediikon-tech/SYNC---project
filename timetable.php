@@ -10,13 +10,15 @@ $pageTitle = 'Weekly timetable';
 $activePage = 'timetable';
 $academicSession = '2026/2027';
 $semester = 1;
-$days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
-$slots = [
-    ['label' => '08:00 - 10:00', 'start' => 8],
-    ['label' => '10:00 - 12:00', 'start' => 10],
-    ['label' => '12:00 - 14:00', 'start' => 12],
-    ['label' => '14:00 - 16:00', 'start' => 14],
-];
+$days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+// Cover the full day so early morning, evening, and overnight-hour classes remain visible.
+$slots = [];
+for ($hour = 0; $hour < 24; $hour += 2) {
+    $slots[] = [
+        'label' => sprintf('%02d:00 - %02d:00', $hour, $hour + 2),
+        'start' => $hour,
+    ];
+}
 $classes = [];
 $allClasses = [];
 $venues = [];
@@ -25,7 +27,7 @@ $registeredCourseCount = 0;
 $error = '';
 
 foreach ($days as $day) {
-    $classes[$day] = [[], [], [], []];
+    $classes[$day] = array_fill(0, count($slots), []);
 }
 
 require_once __DIR__ . '/config/database.php';
@@ -70,7 +72,7 @@ if (($currentUser['role'] ?? '') === 'student') {
         $teachingDays[$day] = true;
         if (isset($classes[$day])) {
             $startHour = (int) substr((string) $class['start_time'], 0, 2);
-            $slotIndex = (int) floor(($startHour - 8) / 2);
+            $slotIndex = (int) floor($startHour / 2);
             if ($slotIndex >= 0 && $slotIndex < count($slots)) {
                 $classes[$day][$slotIndex][] = $class;
             }
@@ -88,7 +90,7 @@ function sync_time_label(string $time): string
 include __DIR__ . '/includes/header.php';
 ?>
 <div class="welcome-row">
-  <div><p class="eyebrow">PLAN YOUR WEEK</p><h1>Weekly timetable</h1><p class="muted">Your saved classes for registered courses, with lecturer, time, venue and class section.</p></div>
+  <div><p class="eyebrow">PLAN YOUR WEEK</p><h1>Weekly timetable</h1><p class="muted">Your saved classes for registered courses, Monday through Sunday, with lecturer, time, venue and class section.</p></div>
   <form method="get" action="timetable.php"><button class="primary-button timetable-action" type="submit">Refresh timetable <span>↻</span></button></form>
 </div>
 
@@ -117,7 +119,7 @@ include __DIR__ . '/includes/header.php';
       </td><?php endforeach; ?></tr><?php endforeach; ?>
     </tbody></table></div>
   <?php endif; ?>
-  <div class="timetable-note" id="timetableMessage">This page reads saved timetable records from MySQL. Server-side clash validation and schedule creation by lecturers/course representatives are the next scheduling features to implement.</div>
+  <div class="timetable-note" id="timetableMessage">Classes are shown for all seven days. The weekly grid covers the full 24-hour day, and the class list below shows each class's exact time.</div>
 </section>
 
 <section class="panel class-list-panel">
