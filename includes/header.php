@@ -10,6 +10,12 @@ $navItems = [
     'timetable' => ['timetable.php', '▤', 'Weekly timetable'],
     'courses' => ['courses.php', '▣', 'My courses'],
 ];
+if (($currentUser['role'] ?? '') === 'lecturer') {
+    $navItems['lecturer_courses'] = ['lecturer_courses.php', '✓', 'Teaching requests'];
+}
+if (($currentUser['role'] ?? '') === 'admin') {
+    $navItems['admin_approvals'] = ['admin_approvals.php', '⚑', 'Lecturer approvals'];
+}
 ?>
 <!doctype html>
 <html lang="en">
