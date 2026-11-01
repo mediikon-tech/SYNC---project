@@ -12,6 +12,7 @@ $navItems = [
 ];
 if (($currentUser['role'] ?? '') === 'lecturer') {
     $navItems['lecturer_courses'] = ['lecturer_courses.php', '✓', 'Teaching requests'];
+    $navItems['schedule_class'] = ['schedule_class.php', '＋', 'Schedule a class'];
 }
 if (($currentUser['role'] ?? '') === 'admin') {
     $navItems['admin_approvals'] = ['admin_approvals.php', '⚑', 'Lecturer approvals'];
