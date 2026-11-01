@@ -39,3 +39,13 @@
   border-radius: 8px;
 }
 .user-menu:hover, .nav-logout-button:hover { background: rgba(30, 130, 76, 0.08); }
+
+/* Lecturer requests and administrator approvals */
+.success-feedback{font-size:11px;line-height:1.6;padding:11px 12px;background:#eaf6ef;border:1px solid #d4eadb;border-radius:8px;color:#236b45;margin:15px 0 0}
+.status-pending{background:#fff5df;color:#956c1d}
+.status-approved{background:#e8f5ec;color:#24764b}
+.status-rejected{background:#fff0ef;color:#a54e49}
+.status-not{background:#f1f4f1;color:#718078}
+.approval-form{display:grid;gap:8px;min-width:175px}
+.approval-form input{height:34px;border:1px solid #dfe7e1;border-radius:6px;padding:0 9px;font:11px 'DM Sans',sans-serif;min-width:0}
+.approval-actions{display:flex;gap:7px}
