@@ -35,10 +35,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     "INSERT INTO lecturer_course_requests (lecturer_id, course_id, status)
                      VALUES (:lecturer_id, :course_id, 'pending')
                      ON DUPLICATE KEY UPDATE
-                       status = IF(status = 'rejected', 'pending', status),
                        reviewed_by = IF(status = 'rejected', NULL, reviewed_by),
                        reviewed_at = IF(status = 'rejected', NULL, reviewed_at),
-                       review_note = IF(status = 'rejected', NULL, review_note)"
+                       review_note = IF(status = 'rejected', NULL, review_note),
+                       status = IF(status = 'rejected', 'pending', status)"
                 );
                 $save->execute(['lecturer_id' => $user['id'], 'course_id' => $courseId]);
                 $success = 'Your course request has been submitted. An administrator must approve it before you can schedule classes.';
