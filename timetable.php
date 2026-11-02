@@ -42,7 +42,7 @@ if (($currentUser['role'] ?? '') === 'student') {
 
     $scheduleQuery = $pdo->prepare(
         'SELECT s.id, c.course_code, c.title AS course_title,
-                COALESCE(lecturer.full_name, 'Not assigned') AS lecturer_name,
+                COALESCE(lecturer.full_name, \'Not assigned\') AS lecturer_name,
                 s.day_of_week, s.start_time, s.end_time, s.venue,
                 s.class_section, s.status
          FROM student_courses sc
