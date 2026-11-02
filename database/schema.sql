@@ -99,11 +99,28 @@ CREATE TABLE IF NOT EXISTS lecturer_course_requests (
   INDEX idx_lcr_status (status, created_at)
 ) ENGINE=InnoDB;
 
+
+-- Exactly two representative positions are available per department.
+CREATE TABLE IF NOT EXISTS department_representatives (
+  id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  department_id INT UNSIGNED NOT NULL,
+  representative_user_id BIGINT UNSIGNED NOT NULL,
+  position TINYINT UNSIGNED NOT NULL,
+  assigned_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE KEY uq_department_rep_position (department_id, position),
+  UNIQUE KEY uq_rep_user (representative_user_id),
+  CONSTRAINT fk_rep_department FOREIGN KEY (department_id) REFERENCES departments(id)
+    ON UPDATE CASCADE ON DELETE CASCADE,
+  CONSTRAINT fk_rep_user FOREIGN KEY (representative_user_id) REFERENCES users(id)
+    ON UPDATE CASCADE ON DELETE CASCADE,
+  CONSTRAINT chk_rep_position CHECK (position IN (1, 2))
+) ENGINE=InnoDB;
+
 -- A class schedule is only accepted after server-side conflict validation.
 CREATE TABLE IF NOT EXISTS class_schedules (
   id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   course_id INT UNSIGNED NOT NULL,
-  lecturer_id BIGINT UNSIGNED NOT NULL,
+  lecturer_id BIGINT UNSIGNED NULL,
   scheduled_by BIGINT UNSIGNED NOT NULL,
   day_of_week ENUM('Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday') NOT NULL,
   start_time TIME NOT NULL,
@@ -118,7 +135,7 @@ CREATE TABLE IF NOT EXISTS class_schedules (
   CONSTRAINT fk_schedule_course FOREIGN KEY (course_id) REFERENCES courses(id)
     ON UPDATE CASCADE ON DELETE RESTRICT,
   CONSTRAINT fk_schedule_lecturer FOREIGN KEY (lecturer_id) REFERENCES users(id)
-    ON UPDATE CASCADE ON DELETE RESTRICT,
+    ON UPDATE CASCADE ON DELETE SET NULL,
   CONSTRAINT fk_schedule_creator FOREIGN KEY (scheduled_by) REFERENCES users(id)
     ON UPDATE CASCADE ON DELETE RESTRICT,
   INDEX idx_schedule_day_time (day_of_week, start_time, end_time),
