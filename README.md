@@ -50,7 +50,29 @@ SET role = 'admin', department_id = NULL, academic_level = NULL
 WHERE email = 'admin@example.com';
 ```
 
-5. Sign out and sign in again so the new role is loaded into the session. Use a real, unique email address for each account. Keep administrator access restricted.
+5. To assign a course representative, register a separate account, then set its role and department. Replace the email and department code:
+
+```sql
+UPDATE users
+SET role = 'course_rep',
+    department_id = (SELECT id FROM departments WHERE code = 'CSC'),
+    academic_level = NULL
+WHERE email = 'rep1@example.com';
+```
+
+6. Assign the account to one of the department's two representative positions. Use position 1 for the first representative and position 2 for the second:
+
+```sql
+INSERT INTO department_representatives (department_id, representative_user_id, position)
+SELECT d.id, u.id, 1
+FROM departments d
+JOIN users u ON u.email = 'rep1@example.com' AND u.role = 'course_rep'
+WHERE d.code = 'CSC';
+```
+
+Repeat with the second representative's email and `position = 2`. Database constraints prevent a third position or duplicate assignment.
+
+7. Sign out and sign in again so the new role is loaded into the session. Use real, unique email addresses. Keep administrator access restricted.
 
 ## Database foundation
 The schema includes:
@@ -58,7 +80,8 @@ The schema includes:
 - courses and default course mappings by department, level, semester, and academic session
 - student course selections, including the ability to remove and restore default courses
 - lecturer course approval requests
-- class schedules with course, lecturer, day, time, venue, section, session, and semester
+- class schedules with course, optional lecturer, scheduling user, day, time, venue, section, session, and semester
+- two fixed course representative positions per department, used only for courses without an existing scheduled class
 - timetable conflict records for review and resolution
 
 ## Current development status
@@ -68,4 +91,7 @@ The schema includes:
 - Lecturers can request courses in their department.
 - Administrators can approve or reject pending lecturer course requests.
 - Role-specific navigation links are available for lecturer and administrator accounts.
-- Class scheduling, course representative fallback scheduling, automatic timetable generation, and full clash validation remain to be implemented.
+- Lecturers can schedule approved courses on any day from Monday to Sunday.
+- Assigned course representatives can schedule unscheduled courses in their own department. These classes appear to registered students with the lecturer shown as 'Not assigned' until a lecturer is assigned.
+- Both lecturer and representative scheduling check venue, course-section, and overlapping student-course clashes. Conflicting attempts are logged for administrator review.
+- Automatic timetable generation and full administrator conflict management remain to be implemented.
