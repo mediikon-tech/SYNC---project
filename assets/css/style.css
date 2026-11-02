@@ -60,3 +60,6 @@
 .schedule-submit-row{display:flex;align-items:center;justify-content:space-between;gap:14px;margin-top:20px;padding-top:17px;border-top:1px solid var(--line)}
 .schedule-submit-row .muted{margin:0;line-height:1.6}
 @media(max-width:560px){.schedule-form-panel{padding:16px}.schedule-submit-row{align-items:stretch;flex-direction:column}.schedule-submit-row .primary-button{width:100%}}
+
+/* Course representative scheduling */
+.rep-position-note{font-size:11px;color:#6e7d72;background:#f5faf6;border:1px solid #e1eee4;border-radius:8px;padding:11px 13px;line-height:1.6}
