@@ -26,7 +26,8 @@ The scheduling layer must validate course, lecturer, time, venue, and student-gr
 4. Select **Import**, choose `database/schema.sql`, and run it. The script creates the `sync_db` database and core tables.
 5. Optional: import `database/demo_data.sql` to add illustrative Computer Science courses for 400 Level, Semester 1. Replace these examples with your institution's approved curriculum.
 6. The local PDO defaults are in `config/database.php`: host `127.0.0.1`, database `sync_db`, username `root`, and an empty password. Environment variables `SYNC_DB_HOST`, `SYNC_DB_NAME`, `SYNC_DB_USER`, and `SYNC_DB_PASS` can override these defaults.
-7. Open `http://localhost/sync/` in your browser.
+7. If you already imported an earlier version of the Sync database, open phpMyAdmin, select `sync_db`, choose the SQL tab, and run `database/migrations/001_course_rep_scheduling.sql`. This migration makes the lecturer field optional for representative-created classes and creates the two representative positions per department. Do not run this migration on a fresh database created from the updated schema, because those changes are already included.
+8. Open `http://localhost/sync/` in your browser.
 
 ## Create staff accounts for local testing
 Public registration creates student accounts only. This prevents visitors from granting themselves lecturer or administrator privileges.
@@ -90,7 +91,7 @@ The schema includes:
 - The weekly timetable reads scheduled classes for a student's selected courses.
 - Lecturers can request courses in their department.
 - Administrators can approve or reject pending lecturer course requests.
-- Role-specific navigation links are available for lecturer and administrator accounts.
+- Role-specific navigation links are available for lecturers, course representatives, and administrators.
 - Lecturers can schedule approved courses on any day from Monday to Sunday.
 - Assigned course representatives can schedule unscheduled courses in their own department. These classes appear to registered students with the lecturer shown as 'Not assigned' until a lecturer is assigned.
 - Both lecturer and representative scheduling check venue, course-section, and overlapping student-course clashes. Conflicting attempts are logged for administrator review.
