@@ -73,7 +73,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             END AS reason
                      FROM class_schedules s
                      INNER JOIN courses c ON c.id = s.course_id
-                     INNER JOIN users lecturer ON lecturer.id = s.lecturer_id
+                     LEFT JOIN users lecturer ON lecturer.id = s.lecturer_id
                      WHERE s.day_of_week = :day_of_week
                        AND s.academic_session = :academic_session
                        AND s.semester = :semester
