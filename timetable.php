@@ -74,10 +74,6 @@ if ($role === 'student') {
     );
     $scheduleQuery->execute([$userId, $academicSession, $semester]);
     $allClasses = $scheduleQuery->fetchAll();
-    $courseCount = (int) $pdo->prepare(
-        "SELECT COUNT(DISTINCT course_id) FROM lecturer_course_requests
-         WHERE lecturer_id = ? AND status = 'approved'"
-    )->execute([$userId]);
     $countQuery = $pdo->prepare(
         "SELECT COUNT(DISTINCT course_id) FROM lecturer_course_requests
          WHERE lecturer_id = ? AND status = 'approved'"
