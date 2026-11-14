@@ -15,8 +15,12 @@ $academicSession = '2026/2027';
 $semester = 1;
 $days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 $slots = [];
-for ($hour = 0; $hour < 24; $hour += 2) {
-    $slots[] = ['label' => sprintf('%02d:00 - %02d:00', $hour, $hour + 2)];
+for ($hour = 0; $hour < 24; $hour++) {
+    $slots[] = [
+        'start' => $hour * 60,
+        'end' => ($hour + 1) * 60,
+        'label' => sprintf('%02d:00 - %02d:00', $hour, $hour + 1),
+    ];
 }
 $classes = [];
 $allClasses = [];
@@ -108,10 +112,18 @@ foreach ($allClasses as $class) {
     $venues[(string) $class['venue']] = true;
     $teachingDays[$day] = true;
     if (isset($classes[$day])) {
-        $startHour = (int) substr((string) $class['start_time'], 0, 2);
-        $slotIndex = (int) floor($startHour / 2);
-        if ($slotIndex >= 0 && $slotIndex < count($slots)) {
-            $classes[$day][$slotIndex][] = $class;
+        $startParts = explode(':', (string) $class['start_time']);
+        $endParts = explode(':', (string) $class['end_time']);
+        $startMinute = ((int) $startParts[0] * 60) + (int) $startParts[1];
+        $endMinute = ((int) $endParts[0] * 60) + (int) $endParts[1];
+
+        foreach ($slots as $slotIndex => $slot) {
+            if ($startMinute < $slot['end'] && $endMinute > $slot['start']) {
+                $classes[$day][$slotIndex][] = [
+                    'class' => $class,
+                    'continues' => $startMinute < $slot['start'],
+                ];
+            }
         }
     }
 }
@@ -155,14 +167,18 @@ include __DIR__ . '/includes/header.php';
     <div class="table-scroll"><table class="week-table"><thead><tr><th>Time</th><?php foreach ($days as $day): ?><th><?= e($day) ?></th><?php endforeach; ?></tr></thead><tbody>
       <?php foreach ($slots as $slotIndex => $slot): ?><tr><th class="time-cell"><?= e($slot['label']) ?></th><?php foreach ($days as $day): ?><td>
         <?php if ($classes[$day][$slotIndex] !== []): ?>
-          <?php foreach ($classes[$day][$slotIndex] as $class): ?>
-            <div class="week-class"><span><?= e($class['course_code']) ?></span><strong><?= e($class['course_title']) ?></strong><small>◷ <?= e(sync_time_label((string) $class['start_time'])) ?>–<?= e(sync_time_label((string) $class['end_time'])) ?></small><small>⌂ <?= e($class['venue']) ?></small><small>♙ <?= e($class['lecturer_name']) ?></small><small>Section: <?= e($class['class_section']) ?></small></div>
+          <?php foreach ($classes[$day][$slotIndex] as $entry): $class = $entry['class']; ?>
+            <?php if ($entry['continues']): ?>
+              <div class="week-class week-class-continuation"><span><?= e($class['course_code']) ?></span><small>Continues until <?= e(sync_time_label((string) $class['end_time'])) ?></small></div>
+            <?php else: ?>
+              <div class="week-class"><span><?= e($class['course_code']) ?></span><strong><?= e($class['course_title']) ?></strong><small>◷ <?= e(sync_time_label((string) $class['start_time'])) ?>–<?= e(sync_time_label((string) $class['end_time'])) ?></small><small>⌂ <?= e($class['venue']) ?></small><small>♙ <?= e($class['lecturer_name']) ?></small><small>Section: <?= e($class['class_section']) ?></small></div>
+            <?php endif; ?>
           <?php endforeach; ?>
         <?php else: ?><div class="free-cell">Free</div><?php endif; ?>
       </td><?php endforeach; ?></tr><?php endforeach; ?>
     </tbody></table></div>
   <?php endif; ?>
-  <div class="timetable-note" id="timetableMessage">Classes are shown for all seven days. The weekly grid covers the full 24-hour day, and the class list below shows each class's exact time.</div>
+  <div class="timetable-note" id="timetableMessage">The weekly grid uses one-hour rows. Classes appear in every hour they overlap, with exact start and end times shown in the class details.</div>
 </section>
 
 <section class="panel class-list-panel">
