@@ -114,3 +114,5 @@ The schema includes:
 - Administrators have a dedicated conflict management page with status filters, case details, review notes, and resolved/unavoidable decisions.
 - Scheduling conflicts from lecturer and representative attempts are saved with their detected conflict category and displayed for administrator review.
 - Administrators can configure available day, time, and venue combinations, then generate a timetable for courses with approved lecturers. Existing schedules remain unchanged, and courses that cannot fit are logged for administrator review.
+- The dashboard now loads live database information for students, lecturers, course representatives, and administrators instead of displaying sample classes and placeholder totals.
+- The weekly timetable now provides role-based views: students see their registered courses, lecturers see their assigned classes, representatives see their department's classes, and administrators see all scheduled classes.
