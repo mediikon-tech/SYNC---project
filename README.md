@@ -27,7 +27,8 @@ The scheduling layer must validate course, lecturer, time, venue, and student-gr
 5. Optional: import `database/demo_data.sql` to add illustrative Computer Science courses for 400 Level, Semester 1. Replace these examples with your institution's approved curriculum.
 6. The local PDO defaults are in `config/database.php`: host `127.0.0.1`, database `sync_db`, username `root`, and an empty password. Environment variables `SYNC_DB_HOST`, `SYNC_DB_NAME`, `SYNC_DB_USER`, and `SYNC_DB_PASS` can override these defaults.
 7. If you already imported an earlier version of the Sync database, open phpMyAdmin, select `sync_db`, choose the SQL tab, and run `database/migrations/001_course_rep_scheduling.sql`. This migration makes the lecturer field optional for representative-created classes and creates the two representative positions per department. Do not run this migration on a fresh database created from the updated schema, because those changes are already included.
-8. Open `http://localhost/sync/` in your browser.
+8. If you already have an older database, import `database/timetable_availability.sql` in phpMyAdmin. Fresh databases created from the updated `database/schema.sql` already include this table.
+9. Open `http://localhost/sync/` in your browser.
 
 ## Development test accounts
 Import `database/test_accounts.sql` in phpMyAdmin after importing `database/schema.sql`. This creates or resets five local test accounts. Every account uses the same password.
@@ -112,4 +113,4 @@ The schema includes:
 - Both lecturer and representative scheduling check venue, course-section, and overlapping student-course clashes. Conflicting attempts are logged for administrator review.
 - Administrators have a dedicated conflict management page with status filters, case details, review notes, and resolved/unavoidable decisions.
 - Scheduling conflicts from lecturer and representative attempts are saved with their detected conflict category and displayed for administrator review.
-- Automatic timetable generation remains to be implemented.
+- Administrators can configure available day, time, and venue combinations, then generate a timetable for courses with approved lecturers. Existing schedules remain unchanged, and courses that cannot fit are logged for administrator review.
