@@ -45,23 +45,57 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         try {
             $pdo->beginTransaction();
 
-            $permission = $pdo->prepare(
-                "SELECT c.id, c.course_code, c.title
-                 FROM lecturer_course_requests lcr
-                 INNER JOIN courses c ON c.id = lcr.course_id
-                 WHERE lcr.lecturer_id = :lecturer_id
-                   AND lcr.course_id = :course_id
-                   AND lcr.status = 'approved'
-                   AND c.is_active = 1
+            // Lock the course row first. Representative scheduling uses the same lock,
+            // so both roles cannot pass their checks and create competing schedules.
+            $courseLock = $pdo->prepare(
+                "SELECT id, course_code, title
+                 FROM courses
+                 WHERE id = :course_id AND is_active = 1
                  FOR UPDATE"
             );
-            $permission->execute(['lecturer_id' => $user['id'], 'course_id' => $courseId]);
-            $course = $permission->fetch();
+            $courseLock->execute(['course_id' => $courseId]);
+            $course = $courseLock->fetch();
 
             if (!$course) {
                 $pdo->rollBack();
-                $error = 'You can only schedule courses that an administrator has approved for you.';
+                $error = 'That course is unavailable.';
             } else {
+                $permission = $pdo->prepare(
+                    "SELECT id
+                     FROM lecturer_course_requests
+                     WHERE lecturer_id = :lecturer_id
+                       AND course_id = :course_id
+                       AND status = 'approved'
+                     LIMIT 1"
+                );
+                $permission->execute(['lecturer_id' => $user['id'], 'course_id' => $courseId]);
+                $approved = (bool) $permission->fetchColumn();
+
+                $fallbackCheck = $pdo->prepare(
+                    "SELECT id
+                     FROM class_schedules
+                     WHERE course_id = :course_id
+                       AND academic_session = :academic_session
+                       AND semester = :semester
+                       AND lecturer_id IS NULL
+                       AND status = 'scheduled'
+                     LIMIT 1
+                     FOR UPDATE"
+                );
+                $fallbackCheck->execute([
+                    'course_id' => $courseId,
+                    'academic_session' => $academicSession,
+                    'semester' => $semester,
+                ]);
+                $hasRepresentativeSchedule = (bool) $fallbackCheck->fetchColumn();
+
+                if (!$approved) {
+                    $pdo->rollBack();
+                    $error = 'You can only schedule courses that an administrator has approved for you.';
+                } elseif ($hasRepresentativeSchedule) {
+                    $pdo->rollBack();
+                    $error = 'A course representative has already scheduled this course. Ask the administrator to review or assign the lecturer to that class instead of creating a duplicate.';
+                } else {
                 $overlap = $pdo->prepare(
                     "SELECT s.id, s.course_id, s.lecturer_id, s.venue, s.class_section,
                             c.course_code, lecturer.full_name AS lecturer_name,
@@ -169,6 +203,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     ]);
                     $pdo->commit();
                     $success = 'Your class has been added to the timetable.';
+                }
                 }
             }
         } catch (Throwable $exception) {
