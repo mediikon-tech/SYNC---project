@@ -29,7 +29,22 @@ The scheduling layer must validate course, lecturer, time, venue, and student-gr
 7. If you already imported an earlier version of the Sync database, open phpMyAdmin, select `sync_db`, choose the SQL tab, and run `database/migrations/001_course_rep_scheduling.sql`. This migration makes the lecturer field optional for representative-created classes and creates the two representative positions per department. Do not run this migration on a fresh database created from the updated schema, because those changes are already included.
 8. Open `http://localhost/sync/` in your browser.
 
-## Create staff accounts for local testing
+## Development test accounts
+Import `database/test_accounts.sql` in phpMyAdmin after importing `database/schema.sql`. This creates or resets five local test accounts. Every account uses the same password.
+
+| Role | Email |
+|---|---|
+| Student | `stu@sync.test` |
+| Lecturer | `lec@sync.test` |
+| Course representative 1 | `rep1@sync.test` |
+| Course representative 2 | `rep2@sync.test` |
+| Administrator | `admin@sync.test` |
+
+**Password for all five accounts:** `Sync123`
+
+If login says the password is incorrect, re-import `database/test_accounts.sql` into the `sync_db` database. The script resets the password hash and reactivates these five accounts. Confirm that the five rows appear in the SQL result at the bottom of the script. These credentials are for local development only. Do not use them on a public deployment.
+
+## Create other staff accounts for local testing
 Public registration creates student accounts only. This prevents visitors from granting themselves lecturer or administrator privileges.
 
 1. Register a normal account through the Sync registration page.
