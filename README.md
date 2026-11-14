@@ -110,4 +110,6 @@ The schema includes:
 - Lecturers can schedule approved courses on any day from Monday to Sunday.
 - Assigned course representatives can schedule unscheduled courses in their own department. These classes appear to registered students with the lecturer shown as 'Not assigned' until a lecturer is assigned.
 - Both lecturer and representative scheduling check venue, course-section, and overlapping student-course clashes. Conflicting attempts are logged for administrator review.
-- Automatic timetable generation and full administrator conflict management remain to be implemented.
+- Administrators have a dedicated conflict management page with status filters, case details, review notes, and resolved/unavoidable decisions.
+- Scheduling conflicts from lecturer and representative attempts are saved with their detected conflict category and displayed for administrator review.
+- Automatic timetable generation remains to be implemented.
