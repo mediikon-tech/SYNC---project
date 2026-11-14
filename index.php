@@ -1,84 +1,268 @@
 <?php
+declare(strict_types=1);
+
 require_once __DIR__ . '/includes/auth.php';
 require_once __DIR__ . '/includes/helpers.php';
 require_login();
+require_once __DIR__ . '/config/database.php';
+
 $currentUser = current_user();
+$userId = (int) ($currentUser['id'] ?? 0);
+$role = (string) ($currentUser['role'] ?? 'student');
+$departmentId = (int) ($currentUser['department_id'] ?? 0);
+$academicSession = '2026/2027';
+$semester = 1;
 $pageTitle = 'Dashboard';
-$today = date('l, j F Y');
-$courses = [
-    ['code' => 'CSC 401', 'title' => 'Software Engineering', 'time' => '09:00 AM - 11:00 AM', 'venue' => 'LT 2', 'lecturer' => 'Dr. A. Musa', 'day' => 'Today'],
-    ['code' => 'CSC 405', 'title' => 'Database Systems', 'time' => '12:00 PM - 02:00 PM', 'venue' => 'Lab 1', 'lecturer' => 'Mr. J. Okafor', 'day' => 'Today'],
-    ['code' => 'CSC 409', 'title' => 'Computer Networks', 'time' => '10:00 AM - 12:00 PM', 'venue' => 'LT 1', 'lecturer' => 'Mrs. S. Bello', 'day' => 'Tomorrow'],
-];
+$activePage = 'dashboard';
+$today = date('l');
+$todayLabel = date('l, j F Y');
+$stats = [];
+$quickActions = [];
+$classes = [];
+$courseRows = [];
+$welcomeRole = 'STUDENT WORKSPACE';
+$welcomeMessage = 'Here is your academic schedule at a glance.';
+
+function sync_dashboard_time(string $time): string
+{
+    return date('g:i A', strtotime($time));
+}
+
+if ($role === 'student') {
+    $welcomeRole = 'STUDENT WORKSPACE';
+    $courseCountQuery = $pdo->prepare(
+        'SELECT COUNT(*) FROM student_courses
+         WHERE student_id = ? AND academic_session = ? AND semester = ?'
+    );
+    $courseCountQuery->execute([$userId, $academicSession, $semester]);
+    $courseCount = (int) $courseCountQuery->fetchColumn();
+
+    $scheduleQuery = $pdo->prepare(
+        "SELECT c.course_code, c.title AS course_title,
+                COALESCE(l.full_name, 'Not assigned') AS lecturer_name,
+                s.day_of_week, s.start_time, s.end_time, s.venue, s.class_section
+         FROM student_courses sc
+         INNER JOIN class_schedules s
+           ON s.course_id = sc.course_id
+          AND s.academic_session = sc.academic_session
+          AND s.semester = sc.semester
+         INNER JOIN courses c ON c.id = s.course_id
+         LEFT JOIN users l ON l.id = s.lecturer_id
+         WHERE sc.student_id = ?
+           AND sc.academic_session = ?
+           AND sc.semester = ?
+           AND s.status = 'scheduled'
+         ORDER BY FIELD(s.day_of_week, 'Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'),
+                  s.start_time"
+    );
+    $scheduleQuery->execute([$userId, $academicSession, $semester]);
+    $allClasses = $scheduleQuery->fetchAll();
+    $classes = array_values(array_filter($allClasses, static function (array $class) use ($today): bool {
+        return $class['day_of_week'] === $today;
+    }));
+    $courseQuery = $pdo->prepare(
+        'SELECT c.course_code, c.title
+         FROM student_courses sc
+         INNER JOIN courses c ON c.id = sc.course_id
+         WHERE sc.student_id = ? AND sc.academic_session = ? AND sc.semester = ?
+         ORDER BY c.course_code LIMIT 8'
+    );
+    $courseQuery->execute([$userId, $academicSession, $semester]);
+    $courseRows = $courseQuery->fetchAll();
+
+    $nextClass = null;
+    foreach ($classes as $class) {
+        if ($class['end_time'] > date('H:i:s')) {
+            $nextClass = $class;
+            break;
+        }
+    }
+    $stats = [
+        ['Registered courses', (string) $courseCount, 'Your current course list', 'green-icon', '▣'],
+        ['Classes this week', (string) count($allClasses), 'Across your registered courses', 'blue-icon', '▤'],
+        ['Today’s classes', (string) count($classes), $classes ? 'Scheduled for today' : 'No classes scheduled today', 'purple-icon', '◷'],
+        ['Next class', $nextClass ? sync_dashboard_time($nextClass['start_time']) : 'None', $nextClass ? $nextClass['course_code'] : 'No upcoming class today', 'amber-icon', '✓'],
+    ];
+    $quickActions = [
+        ['courses.php', 'Manage courses', 'Add, remove or restore your courses', '▣', 'green-icon'],
+        ['timetable.php', 'View weekly timetable', 'See your classes across seven days', '▤', 'blue-icon'],
+    ];
+} elseif ($role === 'lecturer') {
+    $welcomeRole = 'LECTURER WORKSPACE';
+    $requestQuery = $pdo->prepare("SELECT COUNT(*) FROM lecturer_course_requests WHERE lecturer_id = ? AND status = 'pending'");
+    $requestQuery->execute([$userId]);
+    $pendingRequests = (int) $requestQuery->fetchColumn();
+
+    $approvedQuery = $pdo->prepare("SELECT COUNT(*) FROM lecturer_course_requests WHERE lecturer_id = ? AND status = 'approved'");
+    $approvedQuery->execute([$userId]);
+    $approvedCourses = (int) $approvedQuery->fetchColumn();
+
+    $classQuery = $pdo->prepare(
+        "SELECT c.course_code, c.title AS course_title, s.day_of_week, s.start_time, s.end_time,
+                s.venue, s.class_section
+         FROM class_schedules s
+         INNER JOIN courses c ON c.id = s.course_id
+         WHERE s.lecturer_id = ? AND s.academic_session = ? AND s.semester = ? AND s.status = 'scheduled'
+         ORDER BY FIELD(s.day_of_week, 'Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'), s.start_time"
+    );
+    $classQuery->execute([$userId, $academicSession, $semester]);
+    $allClasses = $classQuery->fetchAll();
+    $classes = array_values(array_filter($allClasses, static fn(array $class): bool => $class['day_of_week'] === $today));
+    $stats = [
+        ['Pending requests', (string) $pendingRequests, 'Courses awaiting admin review', 'amber-icon', '◷'],
+        ['Approved courses', (string) $approvedCourses, 'Courses you can schedule', 'green-icon', '✓'],
+        ['Classes scheduled', (string) count($allClasses), 'Your saved classes this semester', 'blue-icon', '▤'],
+        ['Today’s classes', (string) count($classes), 'Classes assigned for today', 'purple-icon', '▣'],
+    ];
+    $quickActions = [
+        ['lecturer_courses.php', 'Teaching requests', 'Request or review your course access', '✓', 'green-icon'],
+        ['schedule_class.php', 'Schedule a class', 'Set a day, time, venue and section', '＋', 'blue-icon'],
+    ];
+} elseif ($role === 'course_rep') {
+    $welcomeRole = 'COURSE REPRESENTATIVE WORKSPACE';
+    $availableQuery = $pdo->prepare(
+        "SELECT COUNT(*) FROM courses c
+         WHERE c.department_id = ? AND c.is_active = 1
+           AND NOT EXISTS (
+             SELECT 1 FROM class_schedules s
+             WHERE s.course_id = c.id AND s.academic_session = ?
+               AND s.semester = ? AND s.status = 'scheduled'
+           )"
+    );
+    $availableQuery->execute([$departmentId, $academicSession, $semester]);
+    $unscheduledCourses = (int) $availableQuery->fetchColumn();
+
+    $classQuery = $pdo->prepare(
+        "SELECT c.course_code, c.title AS course_title, s.day_of_week, s.start_time, s.end_time,
+                s.venue, s.class_section
+         FROM class_schedules s
+         INNER JOIN courses c ON c.id = s.course_id
+         WHERE s.scheduled_by = ? AND s.lecturer_id IS NULL
+           AND s.academic_session = ? AND s.semester = ? AND s.status = 'scheduled'
+         ORDER BY FIELD(s.day_of_week, 'Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'), s.start_time"
+    );
+    $classQuery->execute([$userId, $academicSession, $semester]);
+    $allClasses = $classQuery->fetchAll();
+    $classes = array_values(array_filter($allClasses, static fn(array $class): bool => $class['day_of_week'] === $today));
+    $stats = [
+        ['Unscheduled courses', (string) $unscheduledCourses, 'Active courses in your department', 'amber-icon', '◷'],
+        ['Classes you scheduled', (string) count($allClasses), 'Fallback classes saved', 'green-icon', '✓'],
+        ['Today’s classes', (string) count($classes), 'Your fallback classes today', 'blue-icon', '▤'],
+        ['Scheduling position', 'Assigned', 'Department representative access', 'purple-icon', '♙'],
+    ];
+    $quickActions = [
+        ['rep_schedule.php', 'Schedule an unscheduled course', 'Add a class when no lecturer has scheduled it', '＋', 'green-icon'],
+        ['timetable.php', 'View student timetable', 'Check the published weekly schedule', '▤', 'blue-icon'],
+    ];
+} elseif ($role === 'admin') {
+    $welcomeRole = 'ADMINISTRATOR WORKSPACE';
+    $usersCount = (int) $pdo->query('SELECT COUNT(*) FROM users')->fetchColumn();
+    $coursesCount = (int) $pdo->query('SELECT COUNT(*) FROM courses WHERE is_active = 1')->fetchColumn();
+    $pendingCount = (int) $pdo->query("SELECT COUNT(*) FROM lecturer_course_requests WHERE status = 'pending'")->fetchColumn();
+    $conflictsCount = (int) $pdo->query("SELECT COUNT(*) FROM timetable_conflicts WHERE status IN ('open','reviewing')")->fetchColumn();
+    $classQuery = $pdo->prepare(
+        "SELECT c.course_code, c.title AS course_title, s.day_of_week, s.start_time, s.end_time,
+                s.venue, s.class_section
+         FROM class_schedules s
+         INNER JOIN courses c ON c.id = s.course_id
+         WHERE s.academic_session = ? AND s.semester = ? AND s.status = 'scheduled'
+         ORDER BY FIELD(s.day_of_week, 'Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'), s.start_time
+         LIMIT 10"
+    );
+    $classQuery->execute([$academicSession, $semester]);
+    $allClasses = $classQuery->fetchAll();
+    $classes = array_values(array_filter($allClasses, static fn(array $class): bool => $class['day_of_week'] === $today));
+    $stats = [
+        ['Active users', (string) $usersCount, 'Registered system accounts', 'green-icon', '♙'],
+        ['Active courses', (string) $coursesCount, 'Courses available in the system', 'blue-icon', '▣'],
+        ['Pending approvals', (string) $pendingCount, 'Lecturer requests to review', 'amber-icon', '◷'],
+        ['Open conflicts', (string) $conflictsCount, 'Timetable cases needing attention', 'purple-icon', '⚠'],
+    ];
+    $quickActions = [
+        ['admin_approvals.php', 'Lecturer approvals', 'Review pending course requests', '⚑', 'green-icon'],
+        ['conflicts.php', 'Timetable conflicts', 'Review clashes and record decisions', '⚠', 'amber-icon'],
+        ['admin_timetable.php', 'Generate timetable', 'Configure slots and generate classes', '▤', 'blue-icon'],
+    ];
+} else {
+    http_response_code(403);
+    exit('Your account role is not supported.');
+}
+
+require __DIR__ . '/includes/header.php';
 ?>
-<!doctype html>
-<html lang="en">
-<head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title><?= htmlspecialchars($pageTitle) ?> | Sync</title>
-    <link rel="stylesheet" href="assets/css/style.css">
-</head>
-<body>
-<div class="app-shell">
-    <aside class="sidebar" id="sidebar">
-        <a class="brand" href="index.php"><span class="brand-mark">S</span><span>sync<span class="brand-dot">.</span><small>SMART TIMETABLE</small></span></a>
-        <div class="nav-label">WORKSPACE</div>
-        <nav class="main-nav" aria-label="Main navigation">
-            <a class="nav-link active" href="index.php"><span class="nav-icon">▦</span> Dashboard</a>
-            <a class="nav-link" href="timetable.php"><span class="nav-icon">▤</span> Weekly timetable</a>
-            <a class="nav-link" href="courses.php"><span class="nav-icon">▣</span> My courses</a>
-            <a class="nav-link" href="timetable.php"><span class="nav-icon">＋</span> Schedule a class</a>
-        </nav>
-        <div class="nav-label management-label">MANAGEMENT</div>
-        <nav class="main-nav" aria-label="Management navigation">
-            <a class="nav-link" href="register.php"><span class="nav-icon">♙</span> Student registration</a>
-            <a class="nav-link" href="login.php"><span class="nav-icon">↪</span> Sign in</a>
-            <a class="nav-link" href="register.php"><span class="nav-icon">＋</span> Create account</a>
-        </nav>
-        <div class="sidebar-bottom">
-            <div class="help-card"><div class="help-symbol">?</div><strong>Need a hand?</strong><p>Get help using Sync and managing your timetable.</p><a href="mailto:support@sync.local">Contact support ↗</a></div>
-            <div class="user-mini"><div class="avatar"><?= e(strtoupper(substr((string) ($currentUser['full_name'] ?? 'S'), 0, 1))) ?></div><div><strong><?= e($currentUser['full_name'] ?? 'Student') ?></strong><small><?= e($currentUser['department_name'] ?? ucfirst($currentUser['role'] ?? 'user')) ?></small></div><form action="logout.php" method="post"><input type="hidden" name="csrf_token" value="<?= e(csrf_token()) ?>"><button class="user-menu" type="submit" aria-label="Sign out" title="Sign out">↪</button></form></div>
-        </div>
-    </aside>
-    <main class="main-content">
-        <header class="topbar">
-            <button class="mobile-menu" id="mobileMenu" aria-label="Toggle navigation">☰</button>
-            <div class="breadcrumb">Workspace <span>/</span> <strong>Dashboard</strong></div>
-            <div class="topbar-actions"><span class="term-pill"><span></span> 2026/2027 Session</span><button class="icon-button" aria-label="Notifications">♧<i></i></button><div class="avatar top-avatar">MV</div></div>
-        </header>
-        <section class="page-wrap">
-            <div class="welcome-row"><div><p class="eyebrow">STUDENT WORKSPACE</p><h1>Good day, Student <span>✦</span></h1><p class="muted">Here is your academic schedule at a glance.</p></div><div class="date-chip"><span class="calendar-icon">▦</span><span><?= htmlspecialchars($today) ?></span></div></div>
-            <section class="stats-grid" aria-label="Academic summary">
-                <article class="stat-card"><div class="stat-top"><span>Registered courses</span><span class="stat-icon green-icon">▣</span></div><div class="stat-number">06</div><div class="stat-foot"><span class="status-dot"></span> Your current course list</div></article>
-                <article class="stat-card"><div class="stat-top"><span>Classes this week</span><span class="stat-icon blue-icon">▤</span></div><div class="stat-number">12</div><div class="stat-foot">Across your registered courses</div></article>
-                <article class="stat-card"><div class="stat-top"><span>Next class</span><span class="stat-icon purple-icon">◷</span></div><div class="stat-number stat-time">09:00 <small>AM</small></div><div class="stat-foot">Software Engineering</div></article>
-                <article class="stat-card"><div class="stat-top"><span>Timetable status</span><span class="stat-icon amber-icon">✓</span></div><div class="stat-number status-number">Ready</div><div class="stat-foot"><span class="status-dot"></span> Review your weekly plan</div></article>
-            </section>
-            <section class="content-grid">
-                <article class="panel timetable-panel" id="timetable">
-                    <div class="panel-heading"><div><h2>Your timetable</h2><p class="muted">Keep track of your upcoming classes.</p></div><a class="text-link" href="timetable.php">View full timetable <span>↗</span></a></div>
-                    <div class="day-switcher"><button class="day-tab selected" data-day="Today">Today <span>3</span></button><button class="day-tab" data-day="Tomorrow">Tomorrow <span>2</span></button><button class="day-tab" data-day="Friday">Friday <span>4</span></button></div>
-                    <div class="class-list" id="classList">
-                        <?php foreach ($courses as $course): ?>
-                        <div class="class-row" data-day="<?= htmlspecialchars($course['day']) ?>">
-                            <div class="class-time"><?= htmlspecialchars($course['time']) ?></div><div class="class-line"><span></span></div>
-                            <div class="class-details"><div class="class-title-row"><div><span class="course-code"><?= htmlspecialchars($course['code']) ?></span><h3><?= htmlspecialchars($course['title']) ?></h3></div><span class="class-tag"><?= htmlspecialchars($course['day']) ?></span></div><div class="class-meta"><span>♙ <?= htmlspecialchars($course['lecturer']) ?></span><span>⌂ <?= htmlspecialchars($course['venue']) ?></span></div></div>
-                        </div>
-                        <?php endforeach; ?>
-                    </div>
-                    <div class="empty-state" id="emptyState" hidden>No sample classes for this day yet.</div>
-                </article>
-                <aside class="right-column">
-                    <article class="panel quick-panel"><div class="panel-heading"><div><h2>Quick actions</h2><p class="muted">Jump into your workflow.</p></div></div><a class="quick-action" href="courses.php"><span class="quick-icon green-icon">▣</span><span><strong>Manage courses</strong><small>Add or remove your courses</small></span><b>›</b></a><a class="quick-action" href="timetable.php"><span class="quick-icon blue-icon">＋</span><span><strong>Schedule a class</strong><small>Submit a new class schedule</small></span><b>›</b></a><a class="quick-action" href="#weekly-view"><span class="quick-icon purple-icon">▤</span><span><strong>Generate timetable</strong><small>Build your weekly view</small></span><b>›</b></a></article>
-                    <article class="tip-card"><div class="tip-icon">✦</div><div><strong>Keep your timetable updated</strong><p>Check course and venue details before heading to class. Sync will flag schedule conflicts as scheduling features are added.</p></div></article>
-                </aside>
-            </section>
-            <section class="panel course-panel" id="courses"><div class="panel-heading"><div><h2>Your courses</h2><p class="muted">A quick look at your registered courses.</p></div><a class="text-link" href="courses.php">Manage courses <span>↗</span></a></div><div class="course-chips"><span><b>CSC 401</b> Software Engineering</span><span><b>CSC 405</b> Database Systems</span><span><b>CSC 409</b> Computer Networks</span><span><b>CSC 411</b> Artificial Intelligence</span><span><b>CSC 415</b> Research Methods</span><span><b>CSC 417</b> Project Management</span></div></section>
-            <footer class="footer"><span>© <?= date('Y') ?> Sync. Smart course allocation and timetable management.</span><span>Built for a clearer academic week.</span></footer>
-        </section>
-    </main>
+<div class="welcome-row">
+  <div>
+    <p class="eyebrow"><?= e($welcomeRole) ?></p>
+    <h1>Good day, <?= e($currentUser['full_name'] ?? 'User') ?> <span>✦</span></h1>
+    <p class="muted"><?= e($welcomeMessage) ?></p>
+  </div>
+  <div class="date-chip"><span class="calendar-icon">▦</span><span><?= e($todayLabel) ?></span></div>
 </div>
-<script src="assets/js/app.js"></script>
-</body>
-</html>
+
+<section class="stats-grid" aria-label="Dashboard summary">
+  <?php foreach ($stats as $stat): ?>
+    <article class="stat-card">
+      <div class="stat-top"><span><?= e($stat[0]) ?></span><span class="stat-icon <?= e($stat[3]) ?>"><?= e($stat[4]) ?></span></div>
+      <div class="stat-number"><?= e($stat[1]) ?></div>
+      <div class="stat-foot"><?= e($stat[2]) ?></div>
+    </article>
+  <?php endforeach; ?>
+</section>
+
+<section class="content-grid">
+  <article class="panel timetable-panel" id="timetable">
+    <div class="panel-heading">
+      <div><h2>Today’s classes</h2><p class="muted">Your saved classes for <?= e($today) ?>.</p></div>
+      <a class="text-link" href="timetable.php">View full timetable <span>↗</span></a>
+    </div>
+    <?php if (!$classes): ?>
+      <div class="empty-state">There are no scheduled classes to show for today.</div>
+    <?php else: ?>
+      <div class="class-list">
+        <?php foreach ($classes as $class): ?>
+          <div class="class-row">
+            <div class="class-time"><?= e(sync_dashboard_time($class['start_time'])) ?> - <?= e(sync_dashboard_time($class['end_time'])) ?></div>
+            <div class="class-line"><span></span></div>
+            <div class="class-details">
+              <div class="class-title-row">
+                <div><span class="course-code"><?= e($class['course_code']) ?></span><h3><?= e($class['course_title']) ?></h3></div>
+                <span class="class-tag"><?= e($class['day_of_week']) ?></span>
+              </div>
+              <div class="class-meta"><span>⌂ <?= e($class['venue']) ?></span><span>Section: <?= e($class['class_section']) ?></span></div>
+            </div>
+          </div>
+        <?php endforeach; ?>
+      </div>
+    <?php endif; ?>
+  </article>
+
+  <aside class="right-column">
+    <article class="panel quick-panel">
+      <div class="panel-heading"><div><h2>Quick actions</h2><p class="muted">Go directly to your workspace.</p></div></div>
+      <?php foreach ($quickActions as $action): ?>
+        <a class="quick-action" href="<?= e($action[0]) ?>">
+          <span class="quick-icon <?= e($action[4]) ?>"><?= e($action[3]) ?></span>
+          <span><strong><?= e($action[1]) ?></strong><small><?= e($action[2]) ?></small></span>
+          <b>›</b>
+        </a>
+      <?php endforeach; ?>
+    </article>
+    <article class="tip-card">
+      <div class="tip-icon">✦</div>
+      <div><strong>Keep your information updated</strong><p>Check your course selections and timetable details regularly. Sync checks scheduling conflicts before classes are saved.</p></div>
+    </article>
+  </aside>
+</section>
+
+<?php if ($role === 'student' && $courseRows): ?>
+<section class="panel course-panel" id="courses">
+  <div class="panel-heading"><div><h2>Your registered courses</h2><p class="muted">Courses saved for <?= e($academicSession) ?>, Semester <?= (int) $semester ?>.</p></div><a class="text-link" href="courses.php">Manage courses <span>↗</span></a></div>
+  <div class="course-chips">
+    <?php foreach ($courseRows as $course): ?>
+      <span><b><?= e($course['course_code']) ?></b> <?= e($course['title']) ?></span>
+    <?php endforeach; ?>
+  </div>
+</section>
+<?php endif; ?>
+
+<?php require __DIR__ . '/includes/footer.php'; ?>
