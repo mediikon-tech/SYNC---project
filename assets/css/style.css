@@ -63,3 +63,37 @@
 
 /* Course representative scheduling */
 .rep-position-note{font-size:11px;color:#6e7d72;background:#f5faf6;border:1px solid #e1eee4;border-radius:8px;padding:11px 13px;line-height:1.6}
+
+
+/* Administrator timetable conflict management */
+.conflict-stats{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px;margin-bottom:18px}
+.conflict-stat{display:flex;flex-direction:column;gap:10px;padding:15px 16px;background:#fff;border:1px solid var(--line);border-radius:11px;transition:border-color .2s,background .2s}
+.conflict-stat:hover,.conflict-stat.selected{border-color:#a9d4b8;background:#f7fbf8}
+.conflict-stat span{font-size:10px;color:#78857d}
+.conflict-stat strong{font:800 23px Manrope,sans-serif;color:var(--ink)}
+.conflict-list-panel{padding:22px}
+.conflict-list{display:grid;gap:14px;margin-top:18px}
+.conflict-card{border:1px solid var(--line);border-radius:11px;padding:18px;background:#fff}
+.conflict-card-top{display:flex;justify-content:space-between;gap:14px;align-items:flex-start}
+.conflict-card-top h3{font:800 14px Manrope,sans-serif;margin:10px 0 0;color:#26372d}
+.conflict-card-top time{font-size:10px;color:#89958d;white-space:nowrap}
+.conflict-meta{display:flex;align-items:center;gap:7px;flex-wrap:wrap}
+.conflict-id{font-size:9px;font-weight:800;letter-spacing:.7px;color:#6c7b70}
+.conflict-description{font-size:11px;line-height:1.7;color:#536158;margin:15px 0 8px;white-space:normal}
+.conflict-schedule{display:flex;gap:8px;flex-wrap:wrap;margin-top:13px}
+.conflict-schedule span{font-size:10px;color:#617067;background:#f4f7f4;border:1px solid #e8eee9;border-radius:6px;padding:6px 8px}
+.conflict-reporter{font-size:10px;color:#8b9690;margin:8px 0 0}
+.conflict-note{margin-top:13px;padding:12px 13px;background:#f7faf7;border:1px solid #e7eee8;border-radius:8px}
+.conflict-note strong{font-size:10px;color:#415248}
+.conflict-note p{font-size:11px;line-height:1.6;color:#657269;margin:6px 0}
+.conflict-note small{font-size:9px;color:#8b9690}
+.conflict-review-form{border-top:1px solid #edf1ed;margin-top:15px;padding-top:14px}
+.conflict-review-fields{display:grid;grid-template-columns:minmax(130px,.65fr) minmax(220px,1.5fr) auto;gap:12px;align-items:end}
+.conflict-review-fields label{font-size:10px;font-weight:700;color:#536158}
+.conflict-review-fields select,.conflict-review-fields textarea{width:100%;border:1px solid #dfe7e1;border-radius:7px;background:#fff;padding:9px 10px;font:11px 'DM Sans',sans-serif;color:#26372d;outline:none}
+.conflict-review-fields select{height:38px}
+.conflict-review-fields textarea{resize:vertical;min-height:58px;line-height:1.5}
+.conflict-review-fields select:focus,.conflict-review-fields textarea:focus{border-color:#4caa7b;box-shadow:0 0 0 3px #e8f5ed}
+.conflict-save{white-space:nowrap;padding:11px 14px}
+@media(max-width:1000px){.conflict-stats{grid-template-columns:repeat(3,minmax(0,1fr))}.conflict-review-fields{grid-template-columns:1fr 1fr}.conflict-note-field{grid-column:1/-1}.conflict-save{justify-self:start}}
+@media(max-width:560px){.conflict-stats{grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}.conflict-stat{padding:12px}.conflict-stat strong{font-size:20px}.conflict-list-panel{padding:15px}.conflict-card{padding:13px}.conflict-card-top{flex-direction:column;gap:7px}.conflict-review-fields{grid-template-columns:1fr}.conflict-note-field{grid-column:auto}.conflict-save{width:100%}}
