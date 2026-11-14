@@ -70,7 +70,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                               WHEN LOWER(s.venue) = LOWER(:venue) THEN 'The selected venue is already booked'
                               WHEN s.course_id = :course_id AND s.class_section = :class_section THEN 'This course section already has a class at this time'
                               ELSE 'Some students registered for both courses already have a class at this time'
-                            END AS reason
+                            END AS reason,
+                            CASE
+                              WHEN s.lecturer_id = :lecturer_type THEN 'lecturer'
+                              WHEN LOWER(s.venue) = LOWER(:venue_type) THEN 'venue'
+                              WHEN s.course_id = :course_type AND s.class_section = :section_type THEN 'course'
+                              ELSE 'student_group'
+                            END AS conflict_type
                      FROM class_schedules s
                      INNER JOIN courses c ON c.id = s.course_id
                      LEFT JOIN users lecturer ON lecturer.id = s.lecturer_id
@@ -114,20 +120,30 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     'course_id_check' => $courseId,
                     'class_section_check' => $section,
                     'course_id_students' => $courseId,
+                    'lecturer_type' => $user['id'],
+                    'venue_type' => $venue,
+                    'course_type' => $courseId,
+                    'section_type' => $section,
                 ]);
                 $conflicts = $overlap->fetchAll();
 
                 if ($conflicts) {
                     $reasons = array_values(array_unique(array_column($conflicts, 'reason')));
-                    $description = 'Schedule attempt by lecturer #' . (int) $user['id']
-                        . ' for ' . $course['course_code'] . ' on ' . $day
-                        . ' from ' . $start . ' to ' . $end . ' at ' . $venue
-                        . '. Conflict: ' . implode('; ', $reasons);
                     $log = $pdo->prepare(
                         "INSERT INTO timetable_conflicts (schedule_id, conflict_type, description, status, reported_by)
-                         VALUES (NULL, 'other', :description, 'open', :reported_by)"
+                         VALUES (NULL, :conflict_type, :description, 'open', :reported_by)"
                     );
-                    $log->execute(['description' => $description, 'reported_by' => $user['id']]);
+                    foreach ($conflicts as $conflict) {
+                        $description = 'Schedule attempt by lecturer #' . (int) $user['id']
+                            . ' for ' . $course['course_code'] . ' on ' . $day
+                            . ' from ' . $start . ' to ' . $end . ' at ' . $venue
+                            . '. ' . $conflict['reason'];
+                        $log->execute([
+                            'conflict_type' => $conflict['conflict_type'],
+                            'description' => $description,
+                            'reported_by' => $user['id'],
+                        ]);
+                    }
                     $pdo->commit();
                     $error = 'This class cannot be saved because of a timetable clash: ' . implode('; ', $reasons) . '. The conflict has been recorded for administrator review.';
                 } else {
