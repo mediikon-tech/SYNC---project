@@ -55,7 +55,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'updat
         $error = 'Enter a valid name, email address, and matric number.';
     } elseif (($newPassword !== '' || $confirmPassword !== '') && (strlen($newPassword) < 8 || $newPassword !== $confirmPassword)) {
         $error = 'A new password must contain at least 8 characters and match the confirmation.';
-    } elseif ($targetUser['role'] === 'student' && (!$departmentId || !in_array($level,[100,200,300,400,500,600],true))) {
+    } elseif ($targetUser['role'] === 'student' && (!$departmentId || !in_array($level,[100,200,300,400,500],true))) {
         $error = 'Student accounts require a department and academic level.';
     } elseif (in_array($targetUser['role'],['lecturer','course_rep'],true) && !$departmentId) {
         $error = 'Lecturer and course representative accounts require a department.';
