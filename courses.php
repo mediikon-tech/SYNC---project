@@ -151,7 +151,7 @@ include __DIR__ . '/includes/header.php';
   <article class="stat-card"><div class="stat-top"><span>Registered courses</span><span class="stat-icon green-icon">▣</span></div><div class="stat-number"><?= $registeredCount ?></div><div class="stat-foot">Saved for the <?= e($academicSession) ?> session</div></article>
   <article class="stat-card"><div class="stat-top"><span>Registered units</span><span class="stat-icon blue-icon">Σ</span></div><div class="stat-number"><?= $registeredUnits ?></div><div class="stat-foot">Total units in your current selection</div></article>
   <article class="stat-card"><div class="stat-top"><span>Available courses</span><span class="stat-icon purple-icon">＋</span></div><div class="stat-number"><?= $availableCount ?></div><div class="stat-foot">Mapped to your department and level</div></article>
-  <article class="stat-card"><div class="stat-top"><span>Academic session</span><span class="stat-icon amber-icon">⌂</span></div><div class="stat-number department-number">26/27</div><div class="stat-foot">Semester 1 and 2 course mappings</div></article>
+  <article class="stat-card"><div class="stat-top"><span>Academic session</span><span class="stat-icon amber-icon">⌂</span></div><div class="stat-number department-number"><?= e($academicSession) ?></div><div class="stat-foot">Semester 1 and 2 course mappings</div></article>
 </div>
 
 <section class="panel course-management-panel" id="course-list">
