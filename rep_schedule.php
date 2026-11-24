@@ -250,7 +250,7 @@ require __DIR__ . '/includes/header.php';
 ?>
 <div class="welcome-row">
   <div><p class="eyebrow">COURSE REPRESENTATIVE WORKSPACE</p><h1>Schedule an unscheduled course</h1><p class="muted"><?= e($representative['department_name']) ?> · Position <?= (int) $representative['position'] ?> of 2</p></div>
-  <div class="date-chip"><span class="calendar-icon">▦</span><span>2026/2027 · Semester 1</span></div>
+  <div class="date-chip"><span class="calendar-icon">▦</span><span><?= e($academicSession) ?> · Semester <?= (int) $semester ?></span></div>
 </div>
 
 <?php if ($error !== ''): ?><p class="form-feedback" role="alert"><?= e($error) ?></p><?php endif; ?>
