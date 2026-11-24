@@ -19,6 +19,7 @@ if (($currentUser['role'] ?? '') === 'lecturer') {
 }
 if (($currentUser['role'] ?? '') === 'admin') {
     $navItems['admin_setup'] = ['admin_setup.php', '⚙', 'Academic setup'];
+    $navItems['admin_classes'] = ['admin_classes.php', '▤', 'Manage class schedules'];
     $navItems['user_roles'] = ['user_roles.php', '♙', 'Manage user roles'];
     $navItems['admin_approvals'] = ['admin_approvals.php', '⚑', 'Lecturer approvals'];
     $navItems['conflicts'] = ['conflicts.php', '⚠', 'Timetable conflicts'];
