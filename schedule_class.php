@@ -15,10 +15,14 @@ require_once __DIR__ . '/config/database.php';
 
 $pageTitle = 'Schedule a class';
 $activePage = 'schedule_class';
-$academicSession = '2026/2027';
-$semester = 1;
+require_once __DIR__ . '/includes/academic.php';
+$activeTerm = sync_current_academic_term($pdo);
+$academicSession = $activeTerm['academic_session'];
+$semester = $activeTerm['semester'];
 $error = '';
 $success = '';
+$venueOptions = $pdo->query('SELECT name FROM venues WHERE is_active = 1 ORDER BY name')->fetchAll(PDO::FETCH_COLUMN);
+$venueCapacities = $pdo->query('SELECT name, capacity FROM venues WHERE is_active = 1')->fetchAll(PDO::FETCH_KEY_PAIR);
 
 function sync_valid_time(string $time): bool
 {
@@ -32,6 +36,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $end = (string) ($_POST['end_time'] ?? '');
     $venue = trim((string) ($_POST['venue'] ?? ''));
     $section = trim((string) ($_POST['class_section'] ?? ''));
+    $courseStudentCount = 0;
+    if ($courseId) {
+        $studentCountQuery = $pdo->prepare('SELECT COUNT(*) FROM student_courses WHERE course_id=? AND academic_session=? AND semester=?');
+        $studentCountQuery->execute([$courseId, $academicSession, $semester]);
+        $courseStudentCount = (int) $studentCountQuery->fetchColumn();
+    }
 
     $validDays = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 
@@ -39,8 +49,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $error = 'Your session expired. Refresh the page and try again.';
     } elseif (!$courseId || !in_array($day, $validDays, true) || !sync_valid_time($start) || !sync_valid_time($end) || $end <= $start) {
         $error = 'Enter a valid course, day, start time, and end time. The end time must be later than the start time.';
-    } elseif ($venue === '' || strlen($venue) > 120 || $section === '' || strlen($section) > 80) {
-        $error = 'Enter a venue (up to 120 characters) and class section (up to 80 characters).';
+    } elseif (!in_array($venue, $venueOptions, true) || $section === '' || strlen($section) > 80 || (($venueCapacities[$venue] ?? null) !== null && $courseStudentCount > (int) $venueCapacities[$venue])) {
+        $error = 'Choose an active venue with enough capacity and enter a class section (up to 80 characters).';
     } else {
         try {
             $pdo->beginTransaction();
@@ -247,7 +257,7 @@ require __DIR__ . '/includes/header.php';
 ?>
 <div class="welcome-row">
   <div><p class="eyebrow">LECTURER WORKSPACE</p><h1>Schedule a class</h1><p class="muted">Only courses approved by an administrator appear in this form.</p></div>
-  <div class="date-chip"><span class="calendar-icon">▦</span><span>2026/2027 · Semester 1</span></div>
+  <div class="date-chip"><span class="calendar-icon">▦</span><span><?= e($academicSession) ?> · Semester <?= (int) $semester ?></span></div>
 </div>
 
 <?php if ($error !== ''): ?><p class="form-feedback" role="alert"><?= e($error) ?></p><?php endif; ?>
@@ -267,7 +277,7 @@ require __DIR__ . '/includes/header.php';
         <div class="field-group"><label for="class_section">Class section</label><input id="class_section" name="class_section" maxlength="80" placeholder="e.g. Set A, All students" value="<?= e($_POST['class_section'] ?? 'All students') ?>" required></div>
         <div class="field-group"><label for="start_time">Start time</label><input id="start_time" name="start_time" type="time" value="<?= e($_POST['start_time'] ?? '') ?>" required></div>
         <div class="field-group"><label for="end_time">End time</label><input id="end_time" name="end_time" type="time" value="<?= e($_POST['end_time'] ?? '') ?>" required></div>
-        <div class="field-group field-full"><label for="venue">Venue</label><input id="venue" name="venue" maxlength="120" placeholder="e.g. Lecture Theatre 2" value="<?= e($_POST['venue'] ?? '') ?>" required></div>
+        <div class="field-group field-full"><label for="venue">Venue</label><select id="venue" name="venue" required><option value="">Choose an active venue</option><?php foreach ($venueOptions as $venueOption): ?><option value="<?= e($venueOption) ?>" <?= (($_POST['venue'] ?? '') === $venueOption) ? 'selected' : '' ?>><?= e($venueOption) ?></option><?php endforeach; ?></select><?php if (!$venueOptions): ?><small class="muted">Ask an administrator to add an active teaching venue in Academic setup.</small><?php endif; ?></div>
       </div>
       <div class="schedule-submit-row"><p class="muted">Clashing schedules are rejected and recorded for administrator review.</p><button class="primary-button" type="submit">Save class schedule <span>↗</span></button></div>
     </form>

@@ -16,6 +16,8 @@ $old = ['full_name' => '', 'matric_number' => '', 'email' => '', 'department_id'
 
 try {
     require_once __DIR__ . '/config/database.php';
+    require_once __DIR__ . '/includes/academic.php';
+    $activeAcademicSession = sync_current_academic_term($pdo)['academic_session'];
     $departments = $pdo->query('SELECT id, name, code FROM departments ORDER BY name')->fetchAll();
 } catch (Throwable $exception) {
     $error = 'The database is not ready yet. Import database/schema.sql and check config/database.php.';
@@ -68,9 +70,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                      SELECT ?, course_id, academic_session, semester, 'default'
                      FROM department_course_levels
                      WHERE department_id = ? AND academic_level = ? AND is_default = 1
-                       AND academic_session = '2026/2027'"
+                       AND academic_session = ?"
                 );
-                $defaults->execute([$studentId, (int) $old['department_id'], (int) $old['level']]);
+                $defaults->execute([$studentId, (int) $old['department_id'], (int) $old['level'], $activeAcademicSession]);
                 $pdo->commit();
 
                 session_regenerate_id(true);
@@ -126,8 +128,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <div class="field-group field-full"><label for="email">Email address</label><input id="email" name="email" type="email" value="<?= e($old['email']) ?>" placeholder="you@university.edu" autocomplete="email" maxlength="190" required></div>
             <div class="field-group"><label for="department_id">Department</label><select id="department_id" name="department_id" required><option value="">Select department</option><?php foreach ($departments as $department): ?><option value="<?= (int) $department['id'] ?>" <?= $old['department_id'] === (string) $department['id'] ? 'selected' : '' ?>><?= e($department['name']) ?></option><?php endforeach; ?></select></div>
             <div class="field-group"><label for="level">Academic level</label><select id="level" name="level" required><option value="">Select level</option><?php foreach ([100,200,300,400,500] as $level): ?><option value="<?= $level ?>" <?= $old['level'] === (string) $level ? 'selected' : '' ?>><?= $level ?> Level</option><?php endforeach; ?></select></div>
-            <div class="field-group"><label for="password">Create password</label><input id="password" name="password" type="password" placeholder="At least 8 characters" minlength="8" autocomplete="new-password" required></div>
-            <div class="field-group"><label for="confirm_password">Confirm password</label><input id="confirm_password" name="confirm_password" type="password" placeholder="Enter it again" minlength="8" autocomplete="new-password" required></div>
+            <div class="field-group"><label for="password">Create password</label><div class="password-field"><input id="password" name="password" type="password" placeholder="At least 8 characters" minlength="8" autocomplete="new-password" required><button class="password-toggle" type="button" data-password-toggle aria-controls="password" aria-label="Show password" aria-pressed="false">👁</button></div></div>
+            <div class="field-group"><label for="confirm_password">Confirm password</label><div class="password-field"><input id="confirm_password" name="confirm_password" type="password" placeholder="Enter it again" minlength="8" autocomplete="new-password" required><button class="password-toggle" type="button" data-password-toggle aria-controls="confirm_password" aria-label="Show password" aria-pressed="false">👁</button></div></div>
           </div>
           <label class="remember-row"><input type="checkbox" name="confirm_details" value="1" required> <span>I confirm that the student information provided is accurate.</span></label>
           <button class="primary-button" type="submit">Create student account <span>→</span></button>

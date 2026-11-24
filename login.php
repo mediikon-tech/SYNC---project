@@ -73,7 +73,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
           <input type="hidden" name="csrf_token" value="<?= e(csrf_token()) ?>">
           <label for="email">Email address</label><input id="email" name="email" type="email" placeholder="you@university.edu" autocomplete="email" maxlength="190" required>
           <div class="label-row"><label for="password">Password</label><span class="form-link" title="Ask your administrator to reset your password">Forgot password?</span></div>
-          <input id="password" name="password" type="password" placeholder="Enter your password" autocomplete="current-password" required>
+          <div class="password-field"><input id="password" name="password" type="password" placeholder="Enter your password" autocomplete="current-password" required><button class="password-toggle" type="button" data-password-toggle aria-controls="password" aria-label="Show password" aria-pressed="false">👁</button></div>
           <button class="primary-button" type="submit">Sign in <span>→</span></button>
         </form>
         <p class="auth-switch">New to Sync? <a href="register.php">Create a student account</a></p>

@@ -13,7 +13,7 @@ if (($currentUser['role'] ?? '') !== 'student') {
 
 $pageTitle = 'My courses';
 $activePage = 'courses';
-$academicSession = '2026/2027';
+$academicSession = '';
 $error = '';
 $courseList = [];
 $registeredCount = 0;
@@ -27,6 +27,8 @@ $statusMessages = [
 $notice = $statusMessages[(string) ($_GET['status'] ?? '')] ?? '';
 
 require_once __DIR__ . '/config/database.php';
+require_once __DIR__ . '/includes/academic.php';
+$academicSession = sync_current_academic_term($pdo)['academic_session'];
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = (string) ($_POST['action'] ?? '');
@@ -146,16 +148,16 @@ include __DIR__ . '/includes/header.php';
 <?php if ($notice !== ''): ?><p class="form-feedback course-success" role="status"><?= e($notice) ?></p><?php endif; ?>
 
 <div class="stats-grid course-stats">
-  <article class="stat-card"><div class="stat-top"><span>Registered courses</span><span class="stat-icon green-icon">▣</span></div><div class="stat-number"><?= $registeredCount ?></div><div class="stat-foot">Saved for the 2026/2027 session</div></article>
+  <article class="stat-card"><div class="stat-top"><span>Registered courses</span><span class="stat-icon green-icon">▣</span></div><div class="stat-number"><?= $registeredCount ?></div><div class="stat-foot">Saved for the <?= e($academicSession) ?> session</div></article>
   <article class="stat-card"><div class="stat-top"><span>Registered units</span><span class="stat-icon blue-icon">Σ</span></div><div class="stat-number"><?= $registeredUnits ?></div><div class="stat-foot">Total units in your current selection</div></article>
   <article class="stat-card"><div class="stat-top"><span>Available courses</span><span class="stat-icon purple-icon">＋</span></div><div class="stat-number"><?= $availableCount ?></div><div class="stat-foot">Mapped to your department and level</div></article>
-  <article class="stat-card"><div class="stat-top"><span>Academic session</span><span class="stat-icon amber-icon">⌂</span></div><div class="stat-number department-number">26/27</div><div class="stat-foot">Semester 1 and 2 course mappings</div></article>
+  <article class="stat-card"><div class="stat-top"><span>Academic session</span><span class="stat-icon amber-icon">⌂</span></div><div class="stat-number department-number"><?= e($academicSession) ?></div><div class="stat-foot">Semester 1 and 2 course mappings</div></article>
 </div>
 
 <section class="panel course-management-panel" id="course-list">
   <div class="panel-heading"><div><h2>Course registration</h2><p class="muted">Default courses are suggested by your department and level. Remove one now and add it back later whenever you need to.</p></div><span class="demo-pill">LIVE DATABASE</span></div>
   <?php if ($courseList === []): ?>
-    <div class="empty-state course-empty">No courses have been mapped to your department and level for the 2026/2027 session yet. Ask your administrator to add courses and configure their department, level and semester mappings.</div>
+    <div class="empty-state course-empty">No courses have been mapped to your department and level for the <?= e($academicSession) ?> session yet. Ask your administrator to add courses and configure their department, level and semester mappings.</div>
   <?php else: ?>
     <div class="table-scroll"><table class="data-table"><thead><tr><th>Course</th><th>Units</th><th>Type</th><th>Semester</th><th>Status</th><th>Action</th></tr></thead><tbody>
     <?php foreach ($courseList as $course): $registered = (int) $course['is_registered'] === 1; ?>

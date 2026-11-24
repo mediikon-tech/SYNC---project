@@ -1,4 +1,34 @@
 document.addEventListener('DOMContentLoaded', () => {
+  document.querySelectorAll('[data-password-toggle]').forEach(button => {
+    const input = document.getElementById(button.getAttribute('aria-controls'));
+    if (!input) return;
+    button.addEventListener('click', () => {
+      const reveal = input.type === 'password';
+      input.type = reveal ? 'text' : 'password';
+      button.setAttribute('aria-label', reveal ? 'Hide password' : 'Show password');
+      button.setAttribute('aria-pressed', reveal ? 'true' : 'false');
+    });
+  });
+
+  const roleSelect = document.getElementById('role');
+  const departmentField = document.querySelector('[data-role-department]');
+  const positionField = document.querySelector('[data-rep-position]');
+  const syncRoleFields = () => {
+    if (!roleSelect) return;
+    const needsDepartment = roleSelect.value === 'lecturer' || roleSelect.value === 'course_rep';
+    if (departmentField) {
+      departmentField.hidden = !needsDepartment;
+      const select = departmentField.querySelector('select');
+      if (select) select.required = needsDepartment;
+    }
+    if (positionField) {
+      positionField.hidden = roleSelect.value !== 'course_rep';
+      const select = positionField.querySelector('select');
+      if (select) select.required = roleSelect.value === 'course_rep';
+    }
+  };
+  if (roleSelect) { roleSelect.addEventListener('change', syncRoleFields); syncRoleFields(); }
+
   const menuButton = document.getElementById('mobileMenu');
   const sidebar = document.getElementById('sidebar');
   if (menuButton && sidebar) {
@@ -46,16 +76,6 @@ document.addEventListener('DOMContentLoaded', () => {
     saveCourses.addEventListener('click', () => {
       const message = document.getElementById('courseMessage');
       if (message) message.hidden = false;
-    });
-  }
-
-  const generateTimetable = document.getElementById('generateTimetable');
-  if (generateTimetable) {
-    generateTimetable.addEventListener('click', () => {
-      const message = document.getElementById('timetableMessage');
-      if (message) {
-        message.textContent = 'Sample timetable displayed. Real generation and course, lecturer, time and venue conflict validation will be implemented with the scheduling backend.';
-      }
     });
   }
 

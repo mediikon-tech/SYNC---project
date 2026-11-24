@@ -5,13 +5,15 @@ require_once __DIR__ . '/includes/auth.php';
 require_once __DIR__ . '/includes/helpers.php';
 require_login();
 require_once __DIR__ . '/config/database.php';
+require_once __DIR__ . '/includes/academic.php';
 
 $currentUser = current_user();
 $userId = (int) ($currentUser['id'] ?? 0);
 $role = (string) ($currentUser['role'] ?? 'student');
 $departmentId = (int) ($currentUser['department_id'] ?? 0);
-$academicSession = '2026/2027';
-$semester = 1;
+$activeTerm = sync_current_academic_term($pdo);
+$academicSession = $activeTerm['academic_session'];
+$semester = $activeTerm['semester'];
 $pageTitle = 'Dashboard';
 $activePage = 'dashboard';
 $today = date('l');

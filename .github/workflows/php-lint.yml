@@ -1,0 +1,97 @@
+name: PHP syntax and database schema checks
+
+on:
+  push:
+    branches:
+      - main
+      - feature/account-controls-weekly-timetable
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  php-lint:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+      - name: Lint PHP files
+        run: find . -type f -name '*.php' -print0 | xargs -0 -n1 php -l
+  database-schema:
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: sync-test
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -psync-test"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+      - name: Install MySQL client
+        run: sudo apt-get update && sudo apt-get install -y mysql-client
+      - name: Import fresh database schema
+        run: mysql -h 127.0.0.1 -uroot -psync-test < database/schema.sql
+      - name: Run existing-database migrations
+        run: |
+          mysql -h 127.0.0.1 -uroot -psync-test < database/migrations/002_managed_venues.sql
+          mysql -h 127.0.0.1 -uroot -psync-test < database/migrations/003_academic_settings.sql
+      - name: Verify administrator-managed tables
+        run: |
+          mysql -h 127.0.0.1 -uroot -psync-test -D sync_db -e "SHOW TABLES LIKE 'venues'; SHOW TABLES LIKE 'academic_settings'; SELECT academic_session, semester FROM academic_settings WHERE id=1;"
+      - name: Smoke-test administrator-managed record creation and editing
+        run: |
+          mysql -h 127.0.0.1 -uroot -psync-test -D sync_db <<'SQL'
+          INSERT INTO departments (name, code) VALUES ('CI Test Department', 'CITEST');
+          SET @department_id = LAST_INSERT_ID();
+
+          INSERT INTO users (full_name, email, password_hash, role)
+          VALUES ('CI Test Administrator', 'ci-admin@sync.test', 'test-hash', 'admin');
+          SET @admin_id = LAST_INSERT_ID();
+
+          INSERT INTO courses (department_id, course_code, title, credit_units, course_type, is_active)
+          VALUES (@department_id, 'CIT101', 'CI Test Course', 2, 'core', 1);
+          SET @course_id = LAST_INSERT_ID();
+
+          INSERT INTO department_course_levels (course_id, department_id, academic_level, semester, academic_session, is_default)
+          VALUES (@course_id, @department_id, 100, 1, '2026/2027', 1);
+
+          INSERT INTO venues (name, venue_type, capacity, is_active)
+          VALUES ('CI Test Lecture Theatre', 'Lecture theatre', 120, 1);
+
+          UPDATE academic_settings
+          SET academic_session = '2026/2027', semester = 1, updated_by = @admin_id
+          WHERE id = 1;
+
+          INSERT INTO timetable_availability (day_of_week, start_time, end_time, venue, academic_session, semester, created_by)
+          VALUES ('Monday', '08:00:00', '10:00:00', 'CI Test Lecture Theatre', '2026/2027', 1, @admin_id);
+
+          INSERT INTO class_schedules (course_id, lecturer_id, scheduled_by, day_of_week, start_time, end_time, venue, class_section, academic_session, semester, status)
+          VALUES (@course_id, NULL, @admin_id, 'Monday', '08:00:00', '10:00:00', 'CI Test Lecture Theatre', 'All students', '2026/2027', 1, 'scheduled');
+
+          UPDATE departments SET name = 'CI Test Department Edited' WHERE id = @department_id;
+          UPDATE courses SET title = 'CI Test Course Edited' WHERE id = @course_id;
+          UPDATE department_course_levels SET is_default = 0 WHERE course_id = @course_id;
+          UPDATE venues SET name = 'CI Test Lecture Theatre Edited', capacity = 150 WHERE name = 'CI Test Lecture Theatre';
+          UPDATE timetable_availability SET venue = 'CI Test Lecture Theatre Edited' WHERE venue = 'CI Test Lecture Theatre';
+          UPDATE class_schedules SET venue = 'CI Test Lecture Theatre Edited' WHERE venue = 'CI Test Lecture Theatre';
+
+          SELECT
+            (SELECT COUNT(*) FROM departments WHERE id = @department_id AND name = 'CI Test Department Edited') AS department_edit_ok,
+            (SELECT COUNT(*) FROM courses WHERE id = @course_id AND title = 'CI Test Course Edited') AS course_edit_ok,
+            (SELECT COUNT(*) FROM department_course_levels WHERE course_id = @course_id AND is_default = 0) AS mapping_edit_ok,
+            (SELECT COUNT(*) FROM venues WHERE name = 'CI Test Lecture Theatre Edited' AND capacity = 150) AS venue_edit_ok,
+            (SELECT COUNT(*) FROM timetable_availability WHERE venue = 'CI Test Lecture Theatre Edited') AS availability_edit_ok,
+            (SELECT COUNT(*) FROM class_schedules WHERE course_id = @course_id AND venue = 'CI Test Lecture Theatre Edited') AS class_edit_ok;
+          SQL
+          test "$(mysql -N -h 127.0.0.1 -uroot -psync-test -D sync_db -e "SELECT IF((SELECT COUNT(*) FROM departments WHERE code='CITEST' AND name='CI Test Department Edited')=1 AND (SELECT COUNT(*) FROM courses WHERE course_code='CIT101' AND title='CI Test Course Edited')=1 AND (SELECT COUNT(*) FROM department_course_levels dcl JOIN courses c ON c.id=dcl.course_id WHERE c.course_code='CIT101' AND dcl.is_default=0)=1 AND (SELECT COUNT(*) FROM venues WHERE name='CI Test Lecture Theatre Edited' AND capacity=150)=1 AND (SELECT COUNT(*) FROM timetable_availability WHERE venue='CI Test Lecture Theatre Edited')=1 AND (SELECT COUNT(*) FROM class_schedules s JOIN courses c ON c.id=s.course_id WHERE c.course_code='CIT101' AND s.venue='CI Test Lecture Theatre Edited')=1, 1, 0)")" = "1"
