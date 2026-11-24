@@ -55,7 +55,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $error = 'Complete all class details and choose an active course, venue, and valid lecturer.';
         } else {
             try {
-                $courseCheck=$pdo->prepare('SELECT id FROM courses WHERE id=? AND is_active=1');
+                $pdo->beginTransaction();
+                $courseCheck=$pdo->prepare('SELECT id FROM courses WHERE id=? AND is_active=1 FOR UPDATE');
                 $courseCheck->execute([$courseId]);
                 if (!$courseCheck->fetchColumn()) throw new RuntimeException('The selected course is not active.');
                 $capacityQuery = $pdo->prepare('SELECT capacity FROM venues WHERE name=? AND is_active=1');
@@ -123,7 +124,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $q->execute([$courseId,$lecturerId,$day,$start,$end,$venue,$section,$status,$id,$session,$semester]);
                     $success='Class schedule updated.';
                 }
+                $pdo->commit();
             } catch (Throwable $ex) {
+                if ($pdo->inTransaction()) $pdo->rollBack();
                 if ($ex instanceof RuntimeException) $error=$ex->getMessage();
                 else {
                     error_log('Sync admin class schedule save failed: '.$ex->getMessage());
