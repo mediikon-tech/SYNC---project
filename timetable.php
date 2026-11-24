@@ -11,7 +11,7 @@ $userId = (int) ($currentUser['id'] ?? 0);
 $departmentId = (int) ($currentUser['department_id'] ?? 0);
 $pageTitle = 'Weekly timetable';
 $activePage = 'timetable';
-$academicSession = '2026/2027';
+$academicSession = '';
 $semester = 1;
 $days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 $slots = [];
@@ -34,6 +34,10 @@ foreach ($days as $day) {
 }
 
 require_once __DIR__ . '/config/database.php';
+require_once __DIR__ . '/includes/academic.php';
+$activeTerm = sync_current_academic_term($pdo);
+$academicSession = $activeTerm['academic_session'];
+$semester = $activeTerm['semester'];
 
 $baseSelect = "SELECT s.id, c.course_code, c.title AS course_title,
                       COALESCE(lecturer.full_name, 'Not assigned') AS lecturer_name,
