@@ -15,8 +15,10 @@ require_once __DIR__ . '/config/database.php';
 
 $pageTitle = 'Timetable generation';
 $activePage = 'admin_timetable';
-$session = '2026/2027';
-$semester = 1;
+require_once __DIR__ . '/includes/academic.php';
+$activeTerm = sync_current_academic_term($pdo);
+$session = $activeTerm['academic_session'];
+$semester = $activeTerm['semester'];
 $days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 $error = '';
 $success = '';
