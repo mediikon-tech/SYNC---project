@@ -13,7 +13,7 @@ if (($currentUser['role'] ?? '') !== 'student') {
 
 $pageTitle = 'My courses';
 $activePage = 'courses';
-$academicSession = '2026/2027';
+$academicSession = '';
 $error = '';
 $courseList = [];
 $registeredCount = 0;
@@ -27,6 +27,8 @@ $statusMessages = [
 $notice = $statusMessages[(string) ($_GET['status'] ?? '')] ?? '';
 
 require_once __DIR__ . '/config/database.php';
+require_once __DIR__ . '/includes/academic.php';
+$academicSession = sync_current_academic_term($pdo)['academic_session'];
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = (string) ($_POST['action'] ?? '');
