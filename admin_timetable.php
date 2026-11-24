@@ -311,10 +311,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 $availabilityQuery = $pdo->prepare(
-    "SELECT id, day_of_week, start_time, end_time, venue
-     FROM timetable_availability
-     WHERE academic_session = :session AND semester = :semester
-     ORDER BY FIELD(day_of_week,'Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'), start_time, venue"
+    "SELECT ta.id, ta.day_of_week, ta.start_time, ta.end_time, ta.venue
+     FROM timetable_availability ta
+     INNER JOIN venues v ON v.name = ta.venue AND v.is_active = 1
+     WHERE ta.academic_session = :session AND ta.semester = :semester AND ta.is_active = 1
+     ORDER BY FIELD(ta.day_of_week,'Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'), ta.start_time, ta.venue"
 );
 $availabilityQuery->execute(['session' => $session, 'semester' => $semester]);
 $availability = $availabilityQuery->fetchAll();
