@@ -79,14 +79,4 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  const generateTimetable = document.getElementById('generateTimetable');
-  if (generateTimetable) {
-    generateTimetable.addEventListener('click', () => {
-      const message = document.getElementById('timetableMessage');
-      if (message) {
-        message.textContent = 'Sample timetable displayed. Real generation and course, lecturer, time and venue conflict validation will be implemented with the scheduling backend.';
-      }
-    });
-  }
-
 });
