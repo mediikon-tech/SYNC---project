@@ -22,6 +22,7 @@ $semester = $activeTerm['semester'];
 $error = '';
 $success = '';
 $venueOptions = $pdo->query('SELECT name FROM venues WHERE is_active = 1 ORDER BY name')->fetchAll(PDO::FETCH_COLUMN);
+$venueCapacities = $pdo->query('SELECT name, capacity FROM venues WHERE is_active = 1')->fetchAll(PDO::FETCH_KEY_PAIR);
 $days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 
 function sync_rep_valid_time(string $time): bool
@@ -55,13 +56,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $end = (string) ($_POST['end_time'] ?? '');
     $venue = trim((string) ($_POST['venue'] ?? ''));
     $section = trim((string) ($_POST['class_section'] ?? 'All students'));
+    $courseStudentCount = 0;
+    if ($courseId) {
+        $studentCountQuery = $pdo->prepare('SELECT COUNT(*) FROM student_courses WHERE course_id=? AND academic_session=? AND semester=?');
+        $studentCountQuery->execute([$courseId, $academicSession, $semester]);
+        $courseStudentCount = (int) $studentCountQuery->fetchColumn();
+    }
 
     if (!csrf_is_valid($_POST['csrf_token'] ?? null)) {
         $error = 'Your session expired. Refresh the page and try again.';
     } elseif (!$courseId || !in_array($day, $days, true) || !sync_rep_valid_time($start) || !sync_rep_valid_time($end) || $end <= $start) {
         $error = 'Choose a valid course, day, start time and end time.';
-    } elseif (!in_array($venue, $venueOptions, true) || $section === '' || strlen($section) > 80) {
-        $error = 'Choose an active venue and enter a class section within the stated character limit.';
+    } elseif (!in_array($venue, $venueOptions, true) || $section === '' || strlen($section) > 80 || (($venueCapacities[$venue] ?? null) !== null && $courseStudentCount > (int) $venueCapacities[$venue])) {
+        $error = 'Choose an active venue with enough capacity and enter a class section within the stated character limit.';
     } else {
         try {
             $pdo->beginTransaction();
