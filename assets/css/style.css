@@ -104,3 +104,5 @@
 .auth-form .password-field input{padding-right:48px}
 .password-toggle{position:absolute;right:7px;top:50%;transform:translateY(-50%);width:34px;height:34px;border:0;border-radius:7px;background:transparent;color:#65756a;font-size:17px;cursor:pointer;display:grid;place-items:center}
 .password-toggle:hover,.password-toggle:focus-visible{background:#edf6ef;color:var(--green);outline:2px solid #b9dec6;outline-offset:1px}
+
+.field-group[hidden]{display:none!important}
