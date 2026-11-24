@@ -99,7 +99,7 @@ The administrator navigation includes:
 - **Active academic term:** set the session and semester used by course registration, weekly timetables, lecturer and representative scheduling, and automatic generation.
 - **Manage class schedules:** add, edit, and cancel class records with server-side clash checks.
 - **Generate timetable:** add, edit, and remove available day, time, and venue periods, then generate classes for eligible courses.
-- **Manage user roles:** search for an existing registered email and assign Lecturer, Course Representative, or Administrator access.
+- **Manage users and roles:** search for a registered email, edit profile details, reset passwords, activate or deactivate accounts, and assign Lecturer, Course Representative, or Administrator access.
 
 Courses and venues are deactivated instead of hard-deleted so existing student registrations and timetable history remain intact.
 
