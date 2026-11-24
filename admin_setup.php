@@ -65,9 +65,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     throw new RuntimeException('Complete the course code, title, department, valid credit units, and course type.');
                 }
                 if ($id > 0) {
+                    $oldDepartmentQuery = $pdo->prepare('SELECT department_id FROM courses WHERE id=?');
+                    $oldDepartmentQuery->execute([$id]);
+                    $oldDepartment = $oldDepartmentQuery->fetchColumn();
+                    if ($oldDepartment === false) throw new RuntimeException('Course not found.');
+                    $pdo->beginTransaction();
                     $q = $pdo->prepare('UPDATE courses SET department_id=?, course_code=?, title=?, credit_units=?, course_type=?, description=?, is_active=? WHERE id=?');
                     $q->execute([$departmentId, $code, $title, $units, $type, $description !== '' ? $description : null, $active, $id]);
-                    $success = 'Course updated.';
+                    if ((int)$oldDepartment !== (int)$departmentId) {
+                        $moveMappings = $pdo->prepare('UPDATE department_course_levels SET department_id=? WHERE course_id=?');
+                        $moveMappings->execute([$departmentId, $id]);
+                    }
+                    $pdo->commit();
+                    $success = 'Course updated. Existing department and level allocations were moved with it.';
                 } else {
                     $q = $pdo->prepare('INSERT INTO courses (department_id, course_code, title, credit_units, course_type, description, is_active) VALUES (?,?,?,?,?,?,?)');
                     $q->execute([$departmentId, $code, $title, $units, $type, $description !== '' ? $description : null, $active]);
@@ -127,6 +137,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     if ((string)$oldName !== $name) {
                         $pdo->prepare('UPDATE class_schedules SET venue=? WHERE venue=?')->execute([$name,$oldName]);
                         $pdo->prepare('UPDATE timetable_availability SET venue=? WHERE venue=?')->execute([$name,$oldName]);
+                    }
+                    if ($active === 0) {
+                        $pdo->prepare('UPDATE timetable_availability SET is_active=0 WHERE venue=?')->execute([$name]);
                     }
                     $pdo->commit();
                     $success = 'Venue updated. Existing class schedules and availability periods were updated to use its new name.';
