@@ -19,8 +19,8 @@ $error = '';
 $success = '';
 $targetUser = null;
 $departments = $pdo->query('SELECT id, name, code FROM departments ORDER BY name')->fetchAll();
-$email = strtolower(trim((string) ($_POST['email'] ?? $_GET['email'] ?? '')));
 $allowedRoles = ['lecturer', 'course_rep', 'admin'];
+$email = strtolower(trim((string) ($_POST['email'] ?? $_GET['email'] ?? '')));
 
 $findUser = static function (PDO $pdo, string $email): ?array {
     $query = $pdo->prepare(
@@ -33,7 +33,7 @@ $findUser = static function (PDO $pdo, string $email): ?array {
     return $user ?: null;
 };
 
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'assign_role') {
     $newRole = (string) ($_POST['role'] ?? '');
     $departmentId = filter_var($_POST['department_id'] ?? null, FILTER_VALIDATE_INT);
     $position = filter_var($_POST['position'] ?? null, FILTER_VALIDATE_INT);
@@ -41,7 +41,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (!csrf_is_valid($_POST['csrf_token'] ?? null)) {
         $error = 'Your session expired. Refresh the page and try again.';
     } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
-        $error = 'Enter the exact email address of an existing registered user.';
+        $error = 'The account email is invalid. Search for the account again.';
     } elseif (!in_array($newRole, $allowedRoles, true)) {
         $error = 'Choose a valid role to assign.';
     } elseif (in_array($newRole, ['lecturer', 'course_rep'], true) && !$departmentId) {
@@ -106,7 +106,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                 $pdo->commit();
                 $success = $targetUser['full_name'] . ' now has the ' . str_replace('_', ' ', $newRole) . ' role.';
-                $targetUser = $findUser($pdo, $email);
             } catch (Throwable $exception) {
                 if ($pdo->inTransaction()) {
                     $pdo->rollBack();
@@ -122,9 +121,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
         }
     }
-} elseif (filter_var($email, FILTER_VALIDATE_EMAIL)) {
+}
+
+if (filter_var($email, FILTER_VALIDATE_EMAIL)) {
     $targetUser = $findUser($pdo, $email);
-    if (!$targetUser) {
+    if (!$targetUser && $error === '') {
         $error = 'No registered account matches that email address.';
     }
 }
@@ -135,7 +136,7 @@ require __DIR__ . '/includes/header.php';
   <div>
     <p class="eyebrow">ADMINISTRATION</p>
     <h1>Manage user roles</h1>
-    <p class="muted">Find a registered account by email and assign its staff role.</p>
+    <p class="muted">Find a registered account by email, review its details, then assign its staff role.</p>
   </div>
 </div>
 
@@ -144,13 +145,34 @@ require __DIR__ . '/includes/header.php';
 
 <section class="panel schedule-form-panel">
   <div class="panel-heading"><div><h2>Find a registered user</h2><p class="muted">Every public signup starts as a student. Only an administrator can assign staff access.</p></div></div>
-  <form method="post" action="user_roles.php" class="schedule-form">
-    <input type="hidden" name="csrf_token" value="<?= e(csrf_token()) ?>">
+  <form method="get" action="user_roles.php" class="schedule-form">
     <div class="form-grid">
       <div class="field-group field-full">
         <label for="email">Registered email address</label>
         <input id="email" name="email" type="email" maxlength="190" value="<?= e($email) ?>" placeholder="student@example.com" required>
       </div>
+    </div>
+    <button class="primary-button" type="submit">Search account <span>→</span></button>
+  </form>
+</section>
+
+<?php if ($targetUser !== null): ?>
+<section class="panel class-list-panel">
+  <div class="panel-heading"><div><h2>Account details</h2><p class="muted">Review this account before changing its permissions.</p></div></div>
+  <div class="table-scroll">
+    <table class="data-table"><tbody>
+      <tr><th>Name</th><td><?= e($targetUser['full_name']) ?></td></tr>
+      <tr><th>Email</th><td><?= e($targetUser['email']) ?></td></tr>
+      <tr><th>Current role</th><td><?= e(ucwords(str_replace('_', ' ', $targetUser['role']))) ?></td></tr>
+      <tr><th>Department</th><td><?= e($targetUser['department_name'] ?? 'Not assigned') ?></td></tr>
+    </tbody></table>
+  </div>
+  <?php if ((int) $targetUser['id'] !== (int) $admin['id']): ?>
+  <form method="post" action="user_roles.php" class="schedule-form">
+    <input type="hidden" name="csrf_token" value="<?= e(csrf_token()) ?>">
+    <input type="hidden" name="action" value="assign_role">
+    <input type="hidden" name="email" value="<?= e($targetUser['email']) ?>">
+    <div class="form-grid">
       <div class="field-group">
         <label for="role">Role to assign</label>
         <select id="role" name="role" required>
@@ -180,23 +202,11 @@ require __DIR__ . '/includes/header.php';
     </div>
     <button class="primary-button" type="submit">Assign role <span>→</span></button>
   </form>
-</section>
-
-<?php if ($targetUser !== null): ?>
-<section class="panel class-list-panel">
-  <div class="panel-heading"><div><h2>Account details</h2><p class="muted">Confirm the account before assigning access.</p></div></div>
-  <div class="table-scroll">
-    <table class="data-table"><tbody>
-      <tr><th>Name</th><td><?= e($targetUser['full_name']) ?></td></tr>
-      <tr><th>Email</th><td><?= e($targetUser['email']) ?></td></tr>
-      <tr><th>Current role</th><td><?= e(ucwords(str_replace('_', ' ', $targetUser['role']))) ?></td></tr>
-      <tr><th>Department</th><td><?= e($targetUser['department_name'] ?? 'Not assigned') ?></td></tr>
-    </tbody></table>
-  </div>
+  <?php endif; ?>
 </section>
 <?php endif; ?>
 
 <section class="panel">
-  <p class="muted">Course representatives occupy one of two positions in their department. The system will reject an assignment if both positions are already filled. Lecturer and representative accounts must have a department.</p>
+  <p class="muted">Course representatives occupy one of two positions in their department. The system rejects an assignment if both positions are already filled. Lecturer and representative accounts must have a department. Public registration cannot create staff or administrator accounts.</p>
 </section>
 <?php require __DIR__ . '/includes/footer.php'; ?>
