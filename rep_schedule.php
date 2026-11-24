@@ -15,8 +15,10 @@ require_once __DIR__ . '/config/database.php';
 
 $pageTitle = 'Representative scheduling';
 $activePage = 'rep_schedule';
-$academicSession = '2026/2027';
-$semester = 1;
+require_once __DIR__ . '/includes/academic.php';
+$activeTerm = sync_current_academic_term($pdo);
+$academicSession = $activeTerm['academic_session'];
+$semester = $activeTerm['semester'];
 $error = '';
 $success = '';
 $venueOptions = $pdo->query('SELECT name FROM venues WHERE is_active = 1 ORDER BY name')->fetchAll(PDO::FETCH_COLUMN);
