@@ -17,7 +17,7 @@ The scheduling layer must validate course, lecturer, time, venue, and student-gr
 - **Student:** register, select department and level, manage allocated courses, and view a weekly timetable.
 - **Lecturer:** request approval to teach courses and, after approval, schedule approved courses.
 - **Course representative:** schedule department courses that have not yet been scheduled by a lecturer.
-- **Administrator:** manage users, departments, courses, lecturer approvals, and timetable oversight.
+- **Administrator:** manage user roles, departments, courses, course allocation mappings, teaching venues, the active academic session and semester, available timetable periods, class schedules, lecturer approvals, and timetable conflicts.
 
 ## Run locally with XAMPP
 1. Clone or copy this project into `C:\xampp\htdocs\sync`.
@@ -28,7 +28,9 @@ The scheduling layer must validate course, lecturer, time, venue, and student-gr
 6. The local PDO defaults are in `config/database.php`: host `127.0.0.1`, database `sync_db`, username `root`, and an empty password. Environment variables `SYNC_DB_HOST`, `SYNC_DB_NAME`, `SYNC_DB_USER`, and `SYNC_DB_PASS` can override these defaults.
 7. If you already imported an earlier version of the Sync database, open phpMyAdmin, select `sync_db`, choose the SQL tab, and run `database/migrations/001_course_rep_scheduling.sql`. This migration makes the lecturer field optional for representative-created classes and creates the two representative positions per department. Do not run this migration on a fresh database created from the updated schema, because those changes are already included.
 8. If you already have an older database, import `database/timetable_availability.sql` in phpMyAdmin. Fresh databases created from the updated `database/schema.sql` already include this table.
-9. Open `http://localhost/sync/` in your browser.
+9. For an existing database, run `database/migrations/002_managed_venues.sql` after the timetable availability table exists. This creates the venue registry and imports venue names already used by schedules and available periods.
+10. Run `database/migrations/003_academic_settings.sql` to add the administrator-controlled active academic session and semester.
+11. Open `http://localhost/sync/` in your browser.
 
 ## Development test accounts
 Import `database/test_accounts.sql` in phpMyAdmin after importing `database/schema.sql`. This creates or resets five local test accounts. Every account uses the same password.
@@ -90,6 +92,16 @@ WHERE d.code = 'CSC';
 Repeat with the second representative's email and `position = 2`. Database constraints prevent a third position or duplicate assignment.
 
 7. Sign out and sign in again so the new role is loaded into the session. Use real, unique email addresses. Keep administrator access restricted.
+
+## Administrator management
+The administrator navigation includes:
+- **Academic setup:** add and edit departments, courses, department and level course mappings, and teaching venues. Venue records include type, optional capacity, and active status. Renaming a venue updates existing class schedules and available periods. Inactive venues cannot be selected for new scheduling.
+- **Active academic term:** set the session and semester used by course registration, weekly timetables, lecturer and representative scheduling, and automatic generation.
+- **Manage class schedules:** add, edit, and cancel class records with server-side clash checks.
+- **Generate timetable:** add, edit, and remove available day, time, and venue periods, then generate classes for eligible courses.
+- **Manage user roles:** search for an existing registered email and assign Lecturer, Course Representative, or Administrator access.
+
+Courses and venues are deactivated instead of hard-deleted so existing student registrations and timetable history remain intact.
 
 ## Database foundation
 The schema includes:
