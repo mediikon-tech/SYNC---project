@@ -16,6 +16,8 @@ $old = ['full_name' => '', 'matric_number' => '', 'email' => '', 'department_id'
 
 try {
     require_once __DIR__ . '/config/database.php';
+    require_once __DIR__ . '/includes/academic.php';
+    $activeAcademicSession = sync_current_academic_term($pdo)['academic_session'];
     $departments = $pdo->query('SELECT id, name, code FROM departments ORDER BY name')->fetchAll();
 } catch (Throwable $exception) {
     $error = 'The database is not ready yet. Import database/schema.sql and check config/database.php.';
@@ -68,9 +70,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                      SELECT ?, course_id, academic_session, semester, 'default'
                      FROM department_course_levels
                      WHERE department_id = ? AND academic_level = ? AND is_default = 1
-                       AND academic_session = '2026/2027'"
+                       AND academic_session = ?"
                 );
-                $defaults->execute([$studentId, (int) $old['department_id'], (int) $old['level']]);
+                $defaults->execute([$studentId, (int) $old['department_id'], (int) $old['level'], $activeAcademicSession]);
                 $pdo->commit();
 
                 session_regenerate_id(true);
