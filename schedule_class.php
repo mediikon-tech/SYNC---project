@@ -250,7 +250,7 @@ require __DIR__ . '/includes/header.php';
 ?>
 <div class="welcome-row">
   <div><p class="eyebrow">LECTURER WORKSPACE</p><h1>Schedule a class</h1><p class="muted">Only courses approved by an administrator appear in this form.</p></div>
-  <div class="date-chip"><span class="calendar-icon">▦</span><span>2026/2027 · Semester 1</span></div>
+  <div class="date-chip"><span class="calendar-icon">▦</span><span><?= e($academicSession) ?> · Semester <?= (int) $semester ?></span></div>
 </div>
 
 <?php if ($error !== ''): ?><p class="form-feedback" role="alert"><?= e($error) ?></p><?php endif; ?>
