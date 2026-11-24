@@ -116,6 +116,17 @@ CREATE TABLE IF NOT EXISTS department_representatives (
   CONSTRAINT chk_rep_position CHECK (position IN (1, 2))
 ) ENGINE=InnoDB;
 
+-- Managed lecture theatres, classrooms, laboratories, and other teaching venues.
+CREATE TABLE IF NOT EXISTS venues (
+  id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  name VARCHAR(120) NOT NULL UNIQUE,
+  venue_type VARCHAR(60) NOT NULL DEFAULT 'Lecture theatre',
+  capacity SMALLINT UNSIGNED NULL,
+  is_active TINYINT(1) NOT NULL DEFAULT 1,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB;
+
 -- A class schedule is only accepted after server-side conflict validation.
 CREATE TABLE IF NOT EXISTS class_schedules (
   id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
