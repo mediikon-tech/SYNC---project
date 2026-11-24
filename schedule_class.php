@@ -19,6 +19,7 @@ $academicSession = '2026/2027';
 $semester = 1;
 $error = '';
 $success = '';
+$venueOptions = $pdo->query('SELECT name FROM venues WHERE is_active = 1 ORDER BY name')->fetchAll(PDO::FETCH_COLUMN);
 
 function sync_valid_time(string $time): bool
 {
@@ -39,8 +40,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $error = 'Your session expired. Refresh the page and try again.';
     } elseif (!$courseId || !in_array($day, $validDays, true) || !sync_valid_time($start) || !sync_valid_time($end) || $end <= $start) {
         $error = 'Enter a valid course, day, start time, and end time. The end time must be later than the start time.';
-    } elseif ($venue === '' || strlen($venue) > 120 || $section === '' || strlen($section) > 80) {
-        $error = 'Enter a venue (up to 120 characters) and class section (up to 80 characters).';
+    } elseif (!in_array($venue, $venueOptions, true) || $section === '' || strlen($section) > 80) {
+        $error = 'Choose an active venue and enter a class section (up to 80 characters).';
     } else {
         try {
             $pdo->beginTransaction();
@@ -267,7 +268,7 @@ require __DIR__ . '/includes/header.php';
         <div class="field-group"><label for="class_section">Class section</label><input id="class_section" name="class_section" maxlength="80" placeholder="e.g. Set A, All students" value="<?= e($_POST['class_section'] ?? 'All students') ?>" required></div>
         <div class="field-group"><label for="start_time">Start time</label><input id="start_time" name="start_time" type="time" value="<?= e($_POST['start_time'] ?? '') ?>" required></div>
         <div class="field-group"><label for="end_time">End time</label><input id="end_time" name="end_time" type="time" value="<?= e($_POST['end_time'] ?? '') ?>" required></div>
-        <div class="field-group field-full"><label for="venue">Venue</label><input id="venue" name="venue" maxlength="120" placeholder="e.g. Lecture Theatre 2" value="<?= e($_POST['venue'] ?? '') ?>" required></div>
+        <div class="field-group field-full"><label for="venue">Venue</label><select id="venue" name="venue" required><option value="">Choose an active venue</option><?php foreach ($venueOptions as $venueOption): ?><option value="<?= e($venueOption) ?>" <?= (($_POST['venue'] ?? '') === $venueOption) ? 'selected' : '' ?>><?= e($venueOption) ?></option><?php endforeach; ?></select><?php if (!$venueOptions): ?><small class="muted">Ask an administrator to add an active teaching venue in Academic setup.</small><?php endif; ?></div>
       </div>
       <div class="schedule-submit-row"><p class="muted">Clashing schedules are rejected and recorded for administrator review.</p><button class="primary-button" type="submit">Save class schedule <span>↗</span></button></div>
     </form>
