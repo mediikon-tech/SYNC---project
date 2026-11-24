@@ -11,6 +11,8 @@ if (($admin['role'] ?? '') !== 'admin') {
     exit('Access denied. Administrator permission is required.');
 }
 require_once __DIR__ . '/config/database.php';
+require_once __DIR__ . '/includes/academic.php';
+$term = sync_current_academic_term($pdo);
 
 $pageTitle = 'Academic setup';
 $activePage = 'admin_setup';
@@ -23,7 +25,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $error = 'Your session expired. Refresh the page and try again.';
     } else {
         try {
-            if ($action === 'save_department') {
+            if ($action === 'save_term') {
+                $sessionValue = trim((string) ($_POST['academic_session'] ?? ''));
+                $semesterValue = filter_var($_POST['semester'] ?? null, FILTER_VALIDATE_INT);
+                if (!preg_match('/^\d{4}\/\d{4}$/', $sessionValue) || !in_array($semesterValue, [1,2], true)) {
+                    throw new RuntimeException('Enter an academic session in YYYY/YYYY format and choose semester 1 or 2.');
+                }
+                $q = $pdo->prepare('UPDATE academic_settings SET academic_session=?, semester=?, updated_by=? WHERE id=1');
+                $q->execute([$sessionValue, $semesterValue, (int) $admin['id']]);
+                $term = sync_current_academic_term($pdo);
+                $success = 'The active academic session and semester have been updated across SYNC.';
+            } elseif ($action === 'save_department') {
                 $id = filter_var($_POST['id'] ?? 0, FILTER_VALIDATE_INT) ?: 0;
                 $name = trim((string) ($_POST['name'] ?? ''));
                 $code = strtoupper(trim((string) ($_POST['code'] ?? '')));
@@ -140,6 +152,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
+$term = sync_current_academic_term($pdo);
 $departments = $pdo->query('SELECT id,name,code FROM departments ORDER BY name')->fetchAll();
 $courses = $pdo->query('SELECT c.*,d.name AS department_name FROM courses c JOIN departments d ON d.id=c.department_id ORDER BY c.course_code')->fetchAll();
 $mappings = $pdo->query('SELECT dcl.*,c.course_code,c.title,d.name AS department_name FROM department_course_levels dcl JOIN courses c ON c.id=dcl.course_id JOIN departments d ON d.id=dcl.department_id ORDER BY d.name,dcl.academic_level,dcl.semester,c.course_code')->fetchAll();
@@ -150,6 +163,14 @@ require __DIR__ . '/includes/header.php';
 <div class="welcome-row"><div><p class="eyebrow">SYSTEM CONFIGURATION</p><h1>Academic setup</h1><p class="muted">Manage departments, courses, course allocation rules, and teaching venues.</p></div></div>
 <?php if ($error !== ''): ?><p class="form-feedback" role="alert"><?= e($error) ?></p><?php endif; ?>
 <?php if ($success !== ''): ?><p class="success-feedback" role="status"><?= e($success) ?></p><?php endif; ?>
+
+<section class="panel schedule-form-panel">
+ <div class="panel-heading"><div><h2>Active academic term</h2><p class="muted">Changing this setting updates the session and semester used by student course registration, weekly timetables, scheduling, and timetable generation.</p></div></div>
+ <form method="post" class="schedule-form"><input type="hidden" name="csrf_token" value="<?=e(csrf_token())?>"><input type="hidden" name="action" value="save_term"><div class="form-grid">
+  <div class="field-group"><label>Academic session</label><input name="academic_session" value="<?=e($term['academic_session'])?>" pattern="\d{4}/\d{4}" maxlength="9" placeholder="2026/2027" required></div>
+  <div class="field-group"><label>Active semester</label><select name="semester"><option value="1" <?=$term['semester']===1?'selected':''?>>Semester 1</option><option value="2" <?=$term['semester']===2?'selected':''?>>Semester 2</option></select></div>
+ </div><button class="primary-button" type="submit">Save active term</button></form>
+</section>
 
 <section class="panel schedule-form-panel">
  <div class="panel-heading"><div><h2>Departments</h2><p class="muted">Add departments and update their names or codes.</p></div></div>
