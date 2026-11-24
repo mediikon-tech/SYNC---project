@@ -21,3 +21,31 @@ jobs:
           php-version: '8.2'
       - name: Lint PHP files
         run: find . -type f -name '*.php' -print0 | xargs -0 -n1 php -l
+  database-schema:
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: sync-test
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -psync-test"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+      - name: Install MySQL client
+        run: sudo apt-get update && sudo apt-get install -y mysql-client
+      - name: Import fresh database schema
+        run: mysql -h 127.0.0.1 -uroot -psync-test < database/schema.sql
+      - name: Run existing-database migrations
+        run: |
+          mysql -h 127.0.0.1 -uroot -psync-test < database/migrations/002_managed_venues.sql
+          mysql -h 127.0.0.1 -uroot -psync-test < database/migrations/003_academic_settings.sql
+      - name: Verify administrator-managed tables
+        run: |
+          mysql -h 127.0.0.1 -uroot -psync-test -D sync_db -e "SHOW TABLES LIKE 'venues'; SHOW TABLES LIKE 'academic_settings'; SELECT academic_session, semester FROM academic_settings WHERE id=1;"
