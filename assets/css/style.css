@@ -106,3 +106,15 @@
 .password-toggle:hover,.password-toggle:focus-visible{background:#edf6ef;color:var(--green);outline:2px solid #b9dec6;outline-offset:1px}
 
 .field-group[hidden]{display:none!important}
+
+
+/* Administrator inline editing tables */
+.inline-edit-form{display:flex;align-items:center;flex-wrap:wrap;gap:8px;width:100%}
+.inline-edit-form input:not([type=checkbox]),.inline-edit-form select,.inline-edit-form textarea{min-width:110px;max-width:100%;flex:1 1 130px}
+.inline-edit-form textarea{min-height:38px;resize:vertical}
+.inline-edit-form label{display:flex;align-items:center;gap:5px;white-space:nowrap}
+.inline-edit-form button{flex:0 0 auto}
+.mapping-edit-form input[name=academic_session]{max-width:120px}
+.inline-action-form{display:inline-flex;margin-left:6px}
+.inline-action-form button{white-space:nowrap}
+@media(max-width:700px){.inline-edit-form{align-items:stretch;flex-direction:column}.inline-edit-form input:not([type=checkbox]),.inline-edit-form select,.inline-edit-form textarea{width:100%;flex:auto}.inline-edit-form button{width:100%}}
