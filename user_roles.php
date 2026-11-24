@@ -41,6 +41,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'updat
     $departmentId = filter_var($_POST['department_id'] ?? null, FILTER_VALIDATE_INT);
     $level = filter_var($_POST['academic_level'] ?? null, FILTER_VALIDATE_INT);
     $isActive = isset($_POST['is_active']) ? 1 : 0;
+    $newPassword = (string) ($_POST['new_password'] ?? '');
+    $confirmPassword = (string) ($_POST['confirm_password'] ?? '');
 
     if (!csrf_is_valid($_POST['csrf_token'] ?? null)) {
         $error = 'Your session expired. Refresh the page and try again.';
@@ -51,6 +53,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'updat
     } elseif ($fullName === '' || strlen($fullName) > 160 || !filter_var($newEmail, FILTER_VALIDATE_EMAIL) ||
         strlen($newEmail) > 190 || strlen($matric) > 60) {
         $error = 'Enter a valid name, email address, and matric number.';
+    } elseif ($newPassword !== '' && (strlen($newPassword) < 8 || $newPassword !== $confirmPassword)) {
+        $error = 'A new password must contain at least 8 characters and match the confirmation.';
     } elseif ($targetUser['role'] === 'student' && (!$departmentId || !in_array($level,[100,200,300,400,500,600],true))) {
         $error = 'Student accounts require a department and academic level.';
     } elseif (in_array($targetUser['role'],['lecturer','course_rep'],true) && !$departmentId) {
@@ -89,11 +93,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'updat
                     $moveRep->execute([$departmentId,(int)$targetUser['id']]);
                 }
             }
-            $update=$pdo->prepare('UPDATE users SET full_name=?,email=?,matric_number=?,department_id=?,academic_level=?,is_active=? WHERE id=?');
-            $update->execute([$fullName,$newEmail,$matric !== '' ? $matric : null,$departmentId ?: null,$level ?: null,$isActive,(int)$targetUser['id']]);
+            if ($newPassword !== '') {
+                $update=$pdo->prepare('UPDATE users SET full_name=?,email=?,matric_number=?,department_id=?,academic_level=?,is_active=?,password_hash=? WHERE id=?');
+                $update->execute([$fullName,$newEmail,$matric !== '' ? $matric : null,$departmentId ?: null,$level ?: null,$isActive,password_hash($newPassword,PASSWORD_DEFAULT),(int)$targetUser['id']]);
+            } else {
+                $update=$pdo->prepare('UPDATE users SET full_name=?,email=?,matric_number=?,department_id=?,academic_level=?,is_active=? WHERE id=?');
+                $update->execute([$fullName,$newEmail,$matric !== '' ? $matric : null,$departmentId ?: null,$level ?: null,$isActive,(int)$targetUser['id']]);
+            }
             $pdo->commit();
             $email=$newEmail;
-            $success='User account details updated.';
+            $success=$newPassword !== '' ? 'User account details and password updated.' : 'User account details updated.';
         } catch (Throwable $exception) {
             if ($pdo->inTransaction()) $pdo->rollBack();
             if ($exception instanceof RuntimeException) $error=$exception->getMessage();
@@ -247,7 +256,9 @@ require __DIR__ . '/includes/header.php';
       <div class="field-group"><label for="new_email">Email address</label><input id="new_email" name="new_email" type="email" maxlength="190" value="<?=e($targetUser['email'])?>" required></div>
       <div class="field-group"><label for="matric_number">Matric number</label><input id="matric_number" name="matric_number" maxlength="60" value="<?=e($targetUser['matric_number'] ?? '')?>"></div>
       <div class="field-group"><label for="profile_department">Department</label><select id="profile_department" name="department_id"><option value="">Not assigned</option><?php foreach($departments as $department):?><option value="<?=(int)$department['id']?>" <?=((int)($targetUser['department_id']??0)===(int)$department['id'])?'selected':''?>><?=e($department['name'])?></option><?php endforeach;?></select></div>
-      <div class="field-group"><label for="academic_level">Academic level</label><select id="academic_level" name="academic_level"><option value="">Not applicable</option><?php foreach([100,200,300,400,500,600] as $level):?><option value="<?=$level?>" <?=((int)($targetUser['academic_level']??0)===$level)?'selected':''?>><?=$level?> Level</option><?php endforeach;?></select></div>
+      <div class="field-group"><label for="academic_level">Academic level</label><select id="academic_level" name="academic_level"><option value="">Not applicable</option><?php foreach([100,200,300,400,500] as $level):?><option value="<?=$level?>" <?=((int)($targetUser['academic_level']??0)===$level)?'selected':''?>><?=$level?> Level</option><?php endforeach;?></select></div>
+      <div class="field-group"><label for="new_password">Set new password (optional)</label><input id="new_password" name="new_password" type="password" minlength="8" autocomplete="new-password" placeholder="Leave blank to keep current password"></div>
+      <div class="field-group"><label for="confirm_password">Confirm new password</label><input id="confirm_password" name="confirm_password" type="password" minlength="8" autocomplete="new-password" placeholder="Repeat new password"></div>
     </div>
     <label class="remember-row"><input type="checkbox" name="is_active" <?=$targetUser['is_active']?'checked':''?>> <span>Account active</span></label>
     <button class="primary-button" type="submit">Save account details</button>
