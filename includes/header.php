@@ -5,6 +5,11 @@ require_login();
 $currentUser = current_user();
 if (!isset($pageTitle)) $pageTitle = 'Workspace';
 if (!isset($activePage)) $activePage = '';
+$headerTerm = ['academic_session' => '2026/2027', 'semester' => 1];
+if (isset($pdo) && $pdo instanceof PDO) {
+    require_once __DIR__ . '/academic.php';
+    $headerTerm = sync_current_academic_term($pdo);
+}
 $navItems = [
     'dashboard' => ['index.php', '▦', 'Dashboard'],
     'timetable' => ['timetable.php', '▤', 'Weekly timetable'],
@@ -20,7 +25,7 @@ if (($currentUser['role'] ?? '') === 'lecturer') {
 if (($currentUser['role'] ?? '') === 'admin') {
     $navItems['admin_setup'] = ['admin_setup.php', '⚙', 'Academic setup'];
     $navItems['admin_classes'] = ['admin_classes.php', '▤', 'Manage class schedules'];
-    $navItems['user_roles'] = ['user_roles.php', '♙', 'Manage user roles'];
+    $navItems['user_roles'] = ['user_roles.php', '♙', 'Manage users and roles'];
     $navItems['admin_approvals'] = ['admin_approvals.php', '⚑', 'Lecturer approvals'];
     $navItems['conflicts'] = ['conflicts.php', '⚠', 'Timetable conflicts'];
     $navItems['admin_timetable'] = ['admin_timetable.php', '▦', 'Generate timetable'];
@@ -59,6 +64,6 @@ if (($currentUser['role'] ?? '') === 'admin') {
     <header class="topbar">
       <button class="mobile-menu" id="mobileMenu" aria-label="Toggle navigation">☰</button>
       <div class="breadcrumb">Workspace <span>/</span> <strong><?= htmlspecialchars($pageTitle) ?></strong></div>
-      <div class="topbar-actions"><span class="term-pill"><span></span> 2026/2027 Session</span><a class="avatar top-avatar" href="login.php" aria-label="Sign in">SU</a></div>
+      <div class="topbar-actions"><span class="term-pill"><span></span> <?= e($headerTerm['academic_session']) ?> · Semester <?= (int) $headerTerm['semester'] ?></span><a class="avatar top-avatar" href="login.php" aria-label="Sign in">SU</a></div>
     </header>
     <section class="page-wrap">
