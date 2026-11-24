@@ -138,9 +138,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         $pdo->prepare('UPDATE class_schedules SET venue=? WHERE venue=?')->execute([$name,$oldName]);
                         $pdo->prepare('UPDATE timetable_availability SET venue=? WHERE venue=?')->execute([$name,$oldName]);
                     }
-                    if ($active === 0) {
-                        $pdo->prepare('UPDATE timetable_availability SET is_active=0 WHERE venue=?')->execute([$name]);
-                    }
+                    $pdo->prepare('UPDATE timetable_availability SET is_active=? WHERE venue=?')->execute([$active, $name]);
                     $pdo->commit();
                     $success = 'Venue updated. Existing class schedules and availability periods were updated to use its new name.';
                 } else {
