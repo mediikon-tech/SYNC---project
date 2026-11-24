@@ -1,4 +1,4 @@
-name: PHP syntax checks
+name: PHP syntax and database schema checks
 
 on:
   push:
