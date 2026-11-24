@@ -58,6 +58,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $courseCheck=$pdo->prepare('SELECT id FROM courses WHERE id=? AND is_active=1');
                 $courseCheck->execute([$courseId]);
                 if (!$courseCheck->fetchColumn()) throw new RuntimeException('The selected course is not active.');
+                $capacityQuery = $pdo->prepare('SELECT capacity FROM venues WHERE name=? AND is_active=1');
+                $capacityQuery->execute([$venue]);
+                $venueCapacity = $capacityQuery->fetchColumn();
+                $enrolmentCount = $pdo->prepare('SELECT COUNT(*) FROM student_courses WHERE course_id=? AND academic_session=? AND semester=?');
+                $enrolmentCount->execute([$courseId,$session,$semester]);
+                $studentCount = (int)$enrolmentCount->fetchColumn();
+                if ($venueCapacity !== false && $venueCapacity !== null && $studentCount > (int)$venueCapacity) {
+                    throw new RuntimeException('This venue capacity is below the number of students registered for the course.');
+                }
                 if ($lecturerId !== null) {
                     $lecturerCheck=$pdo->prepare("SELECT id FROM users WHERE id=? AND role='lecturer' AND is_active=1");
                     $lecturerCheck->execute([$lecturerId]);
