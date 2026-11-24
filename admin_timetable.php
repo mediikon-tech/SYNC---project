@@ -21,6 +21,7 @@ $days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Su
 $error = '';
 $success = '';
 $generationSummary = null;
+$venueOptions = $pdo->query('SELECT name FROM venues WHERE is_active = 1 ORDER BY name')->fetchAll(PDO::FETCH_COLUMN);
 
 function sync_generator_time_valid(string $time): bool
 {
@@ -39,8 +40,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         if (!in_array($day, $days, true) || !sync_generator_time_valid($start) ||
             !sync_generator_time_valid($end) || $end <= $start ||
-            $venue === '' || strlen($venue) > 120) {
-            $error = 'Enter a valid day, time range, and venue. The end time must be later than the start time.';
+            !in_array($venue, $venueOptions, true)) {
+            $error = 'Choose an active venue and a valid day and time range. The end time must be later than the start time.';
         } else {
             try {
                 $insert = $pdo->prepare(
@@ -65,6 +66,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     error_log('Sync availability insert failed: ' . $exception->getMessage());
                     $error = 'The availability slot could not be saved.';
                 }
+            }
+        }
+    } elseif ($action === 'update_slot') {
+        $slotId = filter_var($_POST['slot_id'] ?? null, FILTER_VALIDATE_INT);
+        $day = (string) ($_POST['day_of_week'] ?? '');
+        $start = (string) ($_POST['start_time'] ?? '');
+        $end = (string) ($_POST['end_time'] ?? '');
+        $venue = trim((string) ($_POST['venue'] ?? ''));
+        if (!$slotId || !in_array($day, $days, true) || !sync_generator_time_valid($start) ||
+            !sync_generator_time_valid($end) || $end <= $start || !in_array($venue, $venueOptions, true)) {
+            $error = 'Choose a valid day, time range, and active venue for this period.';
+        } else {
+            try {
+                $update = $pdo->prepare(
+                    'UPDATE timetable_availability SET day_of_week=?, start_time=?, end_time=?, venue=?
+                     WHERE id=? AND academic_session=? AND semester=?'
+                );
+                $update->execute([$day,$start,$end,$venue,$slotId,$session,$semester]);
+                $success = $update->rowCount() ? 'Available period updated.' : 'No changes were made, or that period was not found.';
+            } catch (PDOException $exception) {
+                $error = $exception->getCode() === '23000'
+                    ? 'That exact day, time, and venue combination already exists.'
+                    : 'The available period could not be updated.';
             }
         }
     } elseif ($action === 'delete_slot') {
@@ -329,7 +353,7 @@ require __DIR__ . '/includes/header.php';
     <input type="hidden" name="action" value="add_slot">
     <div class="form-grid">
       <div class="field-group"><label for="day_of_week">Day</label><select id="day_of_week" name="day_of_week" required><?php foreach ($days as $day): ?><option value="<?= e($day) ?>"><?= e($day) ?></option><?php endforeach; ?></select></div>
-      <div class="field-group"><label for="venue">Venue</label><input id="venue" name="venue" maxlength="120" placeholder="e.g. Lecture Theatre 1" required></div>
+      <div class="field-group"><label for="venue">Venue</label><select id="venue" name="venue" required><option value="">Choose active venue</option><?php foreach ($venueOptions as $venueOption): ?><option value="<?= e($venueOption) ?>"><?= e($venueOption) ?></option><?php endforeach; ?></select><small class="muted"><a href="admin_setup.php">Manage teaching venues</a></small></div>
       <div class="field-group"><label for="start_time">Start time</label><input id="start_time" name="start_time" type="time" required></div>
       <div class="field-group"><label for="end_time">End time</label><input id="end_time" name="end_time" type="time" required></div>
     </div>
@@ -343,12 +367,19 @@ require __DIR__ . '/includes/header.php';
     <div class="empty-state">No periods have been configured. Add your institution's available periods before generating a timetable.</div>
   <?php else: ?>
     <div class="table-scroll"><table class="data-table"><thead><tr><th>Day</th><th>Time</th><th>Venue</th><th>Action</th></tr></thead><tbody>
-      <?php foreach ($availability as $slot): ?><tr>
-        <td><?= e($slot['day_of_week']) ?></td>
-        <td><?= e(date('g:i A', strtotime($slot['start_time'])) . ' to ' . date('g:i A', strtotime($slot['end_time']))) ?></td>
-        <td><?= e($slot['venue']) ?></td>
-        <td><form method="post" action="admin_timetable.php" onsubmit="return confirm('Remove this available period?');"><input type="hidden" name="csrf_token" value="<?= e(csrf_token()) ?>"><input type="hidden" name="action" value="delete_slot"><input type="hidden" name="slot_id" value="<?= (int) $slot['id'] ?>"><button class="small-action remove-course" type="submit">Remove</button></form></td>
-      </tr><?php endforeach; ?>
+      <?php foreach ($availability as $slot): ?><tr><td colspan="4">
+        <form method="post" action="admin_timetable.php" class="inline-edit-form">
+          <input type="hidden" name="csrf_token" value="<?= e(csrf_token()) ?>">
+          <input type="hidden" name="action" value="update_slot">
+          <input type="hidden" name="slot_id" value="<?= (int) $slot['id'] ?>">
+          <select name="day_of_week"><?php foreach ($days as $day): ?><option value="<?= e($day) ?>" <?= $slot['day_of_week'] === $day ? 'selected' : '' ?>><?= e($day) ?></option><?php endforeach; ?></select>
+          <input name="start_time" type="time" value="<?= e(substr($slot['start_time'],0,5)) ?>" required>
+          <input name="end_time" type="time" value="<?= e(substr($slot['end_time'],0,5)) ?>" required>
+          <select name="venue"><?php foreach ($venueOptions as $venueOption): ?><option value="<?= e($venueOption) ?>" <?= $slot['venue'] === $venueOption ? 'selected' : '' ?>><?= e($venueOption) ?></option><?php endforeach; ?></select>
+          <button class="small-action add-course" type="submit">Save</button>
+        </form>
+        <form method="post" action="admin_timetable.php" onsubmit="return confirm('Remove this available period?');"><input type="hidden" name="csrf_token" value="<?= e(csrf_token()) ?>"><input type="hidden" name="action" value="delete_slot"><input type="hidden" name="slot_id" value="<?= (int) $slot['id'] ?>"><button class="small-action remove-course" type="submit">Remove period</button></form>
+      </td></tr><?php endforeach; ?>
     </tbody></table></div>
     <div class="schedule-submit-row">
       <p class="muted"><?= $scheduledCount ?> existing scheduled class(es) will be kept. Courses without an approved lecturer remain available for representative scheduling.</p>
