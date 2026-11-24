@@ -109,9 +109,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $pdo->beginTransaction();
 
             $slotQuery = $pdo->prepare(
-                "SELECT id, day_of_week, start_time, end_time, venue
-                 FROM timetable_availability
-                 WHERE academic_session = :session AND semester = :semester AND is_active = 1
+                "SELECT ta.id, ta.day_of_week, ta.start_time, ta.end_time, ta.venue, v.capacity
+                 FROM timetable_availability ta
+                 INNER JOIN venues v ON v.name = ta.venue AND v.is_active = 1
+                 WHERE ta.academic_session = :session AND ta.semester = :semester AND ta.is_active = 1
                  ORDER BY FIELD(day_of_week,'Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'), start_time, venue
                  FOR UPDATE"
             );
@@ -222,6 +223,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $courseStudents = $studentMap[$courseId] ?? [];
                 $chosen = null;
                 foreach ($slots as $slot) {
+                    if ($slot['capacity'] !== null && (int) $slot['capacity'] < (int) $course['student_count']) {
+                        continue;
+                    }
                     foreach ($lecturers as $lecturer) {
                         $lecturerId = (int) $lecturer['id'];
                         $hasClash = false;
